@@ -30,6 +30,9 @@ interface Props {
    * client agree on first paint. The board ticks it once a minute.
    */
   now: number;
+  /** Live presence supplied by the board, separate from the person's status. */
+  online?: boolean;
+  isSelf?: boolean;
   /**
    * Rendered at the right of the header row. A slot rather than a set of
    * flags — the board puts a nudge control here, the timeline puts nothing, and
@@ -69,7 +72,7 @@ interface Props {
  * The mono age label is always rendered. Under prefers-reduced-motion, with the
  * breathing gone, it is the entire staleness signal.
  */
-export function StatusNote({ status, name, now, action, onOpen }: Props) {
+export function StatusNote({ status, name, now, action, onOpen, online, isSelf }: Props) {
   const decay = decayFor({
     startedAt: status.started_at,
     state: status.state,
@@ -86,13 +89,13 @@ export function StatusNote({ status, name, now, action, onOpen }: Props) {
 
   return (
     <div
-      className="note-wrap relative pt-3.5"
+      className="note-wrap status-card-wrap"
       data-decay={decay.tier}
       data-blocked={blocked}
       style={{ "--state": look.accent } as React.CSSProperties}
     >
       <article
-        className="note flex min-h-44 w-full flex-col gap-3 p-4"
+        className="note status-card"
         data-decay={decay.tier}
         data-blocked={blocked}
         data-testid="status-note"
@@ -111,72 +114,67 @@ export function StatusNote({ status, name, now, action, onOpen }: Props) {
           />
         )}
 
-        {/* Left padding clears the avatar overhanging from above. */}
-        <header className="flex min-h-9 items-center justify-between gap-2 pl-11">
-          <h3 className="truncate text-sm font-medium tracking-tight">{name}</h3>
-          {/* Lifted above the stretched trigger: this is where the Nudge button
-              lives, and it must stay clickable in its own right. */}
-          <div className="relative z-[2] flex items-center gap-2">
-            {status.duration_minutes != null && (
-              <span
-                className="annotation rounded-full border px-2 py-0.5 text-[0.65rem] whitespace-nowrap"
-                style={{
-                  color: "inherit",
-                  opacity: 0.7,
-                  borderColor:
-                    "color-mix(in oklab, currentColor 30%, transparent)",
-                }}
-                title={`Planned for ${status.duration_minutes} minutes`}
-              >
-                {status.duration_minutes}M
-              </span>
-            )}
-            {action}
+        <header className="status-card-person">
+          <div className="status-card-identity">
+            <h3>{name}{isSelf && <span className="status-card-you">you</span>}</h3>
+            <span className="status-card-presence">
+              {online !== undefined ? <><i data-online={online} aria-hidden="true" />{online ? "Here now" : "Away from the board"}</> : "Status update"}
+            </span>
           </div>
         </header>
+
+        <div className="status-card-labels">
+          <span className="status-card-state"><span className="state-dot" aria-hidden="true" />{label}</span>
+            {status.duration_minutes != null && (
+              <span
+                className="status-card-duration"
+                title={`Planned for ${status.duration_minutes} minutes`}
+              >
+                {status.duration_minutes} min
+              </span>
+            )}
+        </div>
 
         {/* Clamped to three lines. The database allows 140 characters and the
             card is one column of a grid: unclamped, one wordy status makes its
             card taller than every neighbour and the row it sits in goes with
             it. The full text is one click away. */}
-        <p className="note-text note-clamp flex-1 text-lg">
+        <p className="note-text note-clamp status-card-headline">
           {status.note ?? label}
         </p>
 
-        <footer className="flex items-end justify-between gap-3">
-          <span
-            className="annotation flex min-w-0 items-center gap-1.5"
-            style={{ color: "inherit", opacity: 0.65 }}
-          >
-            <span className="truncate">{status.ticket_ref ?? label}</span>
+        <div className="status-card-meta">
+          <span className="status-card-reference">
+            {status.ticket_ref && <span className="status-ticket">{status.ticket_ref}</span>}
             {/* The only trace details leave on the card. Under the stretched
                 trigger on purpose, so pressing the thing that says there is
                 more is what opens it. */}
             {status.details && (
               <span
-                className="shrink-0 rounded-full border px-1.5 text-[0.6rem] leading-[1.4]"
-                style={{
-                  borderColor:
-                    "color-mix(in oklab, currentColor 30%, transparent)",
-                }}
+                className="status-details-marker"
+                title="Additional details in this update"
               >
-                +
+                + details
               </span>
             )}
           </span>
           <span
-            className="annotation whitespace-nowrap"
-            style={{ color: "inherit", opacity: 0.65 }}
+            className="status-card-age"
             title={new Date(status.started_at).toLocaleString()}
           >
             {decay.annotation ?? decay.age}
           </span>
+        </div>
+
+        <footer className="status-card-footer">
+          <span className="status-card-open-hint">{onOpen ? <>View update <span aria-hidden="true">↗</span></> : "Latest status"}</span>
+          <div className="status-card-action">{action}</div>
         </footer>
       </article>
 
       {/* Sibling, not child: see the note above. */}
       <span
-        className="avatar absolute top-0 left-4 z-10"
+        className="avatar status-card-avatar"
         aria-hidden="true"
         title={name}
       >

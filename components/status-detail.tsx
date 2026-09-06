@@ -53,18 +53,18 @@ export function StatusDetail({
 
   return (
     <Dialog open={open} onClose={onClose} label={`${name}'s status`}>
-      <div style={{ "--state": look.accent } as React.CSSProperties}>
+      <div className="status-detail" style={{ "--state": look.accent } as React.CSSProperties}>
         <header className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <span
               aria-hidden="true"
               className="grid size-9 shrink-0 place-items-center rounded-full text-sm font-semibold text-white"
-              style={{ backgroundImage: "var(--gradient-brand)" }}
+              style={{ background: "var(--violet)" }}
             >
               {name.trim().slice(0, 1).toUpperCase() || "?"}
             </span>
             <div className="min-w-0">
-              <h2 className="truncate text-lg leading-tight">{name}</h2>
+              <h2 className="truncate text-lg leading-tight">{name}{isSelf && <span className="status-card-you">you</span>}</h2>
               <p className="annotation mt-1 flex items-center gap-1.5">
                 <span
                   aria-hidden="true"
@@ -87,9 +87,7 @@ export function StatusDetail({
         </header>
 
         {/* The note, unclamped — this is the reason the card clamps it. */}
-        <p className="note-text mt-6 text-2xl break-words">
-          {status.note ?? label}
-        </p>
+        <div className="status-detail-headline"><span className="annotation">What&apos;s happening</span><p className="note-text text-2xl break-words">{status.note ?? label}</p></div>
 
         <div className="mt-6 flex flex-col gap-2">
           <span className="annotation">Details</span>
@@ -103,8 +101,8 @@ export function StatusDetail({
           ) : (
             <p className="text-sm text-[var(--ink-soft)]">
               {isSelf
-                ? "Nothing yet. Add details on your status when the headline needs more room."
-                : "No details on this one."}
+                ? "Add details to your update when a headline needs more room."
+                : "Everything you need is in the headline."}
             </p>
           )}
         </div>
@@ -134,7 +132,7 @@ export function StatusDetail({
             {decay.annotation ?? decay.age}
             {decay.exempt && (
               <span className="ml-2 text-xs text-[var(--ink-soft)]">
-                blocked — held at full colour
+                still blocked
               </span>
             )}
           </Fact>
@@ -156,9 +154,10 @@ export function StatusDetail({
         </dl>
 
         {isSelf && (
-          <div className="mt-6">
-            <Link href="/me" className="btn btn-quiet text-sm">
-              Edit your status
+          <div className="status-detail-footer">
+            <span>This is your current update.</span>
+            <Link href="/me" className="btn btn-primary text-sm">
+              Update your status
             </Link>
           </div>
         )}

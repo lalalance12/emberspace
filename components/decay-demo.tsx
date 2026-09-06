@@ -1,4 +1,6 @@
 import { StatusNote, type NoteStatus } from "@/components/status-note";
+import { decayFor } from "@/lib/staleness";
+import { presentationFor } from "@/lib/status-state";
 
 /**
  * Three cards at three ages.
@@ -61,9 +63,27 @@ export function demoCards(now: number): Array<{ status: NoteStatus; name: string
 }
 
 /** The three cards, staggered in. No preview: there is nothing behind them. */
-export function DecayDemo({ now }: { now: number }) {
+export function DecayDemo({ now, variant = "board" }: { now: number; variant?: "board" | "compact" }) {
+  if (variant === "compact") {
+    return (
+      <div className="public-compact-demo">
+        {demoCards(now).map(({ status, name }) => {
+          const look = presentationFor(status.state);
+          const decay = decayFor({ startedAt: status.started_at, state: status.state, now });
+          return (
+            <div key={status.id} className="public-compact-row" data-state={status.state} data-decay={decay.tier}>
+              <span className="public-compact-avatar" aria-hidden="true">{name.slice(0, 1)}</span>
+              <div className="public-compact-person"><div><strong>{name}</strong><span style={{ "--demo-state": look.accent } as React.CSSProperties}>{look.label}</span></div><p>{status.note}</p></div>
+              <span className="public-compact-age">{decay.annotation ?? decay.age}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
-    <div className="grid gap-5 sm:grid-cols-3">
+    <div className="public-demo-grid">
       {demoCards(now).map(({ status, name }, i) => (
         <div
           key={status.id}
