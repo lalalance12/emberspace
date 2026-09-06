@@ -18,8 +18,8 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <label className="flex flex-col gap-2">
-      <span className="annotation">{label}</span>
+    <label className="form-field flex flex-col gap-2">
+      <span className="field-label">{label}</span>
       {children}
       {hint && <span className="text-sm text-[var(--ink-soft)]">{hint}</span>}
     </label>
@@ -61,12 +61,13 @@ export function Toggle({
   children: ReactNode;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-3 text-sm">
+    <label className="toggle-field flex cursor-pointer items-center gap-3 text-sm">
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="size-4 accent-[var(--violet)]"
+        role="switch"
+        className="toggle-control"
       />
       {children}
     </label>

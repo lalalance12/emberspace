@@ -17,28 +17,27 @@ export function Skeleton({
   return <div aria-hidden="true" className={`skeleton ${className}`} style={style} />;
 }
 
-/** Stands in for a PageHeader: title, mono meta, brand rule. */
+/** Holds the eyebrow, title and description in place during navigation. */
 export function PageHeaderSkeleton({ titleWidth = "9rem" }: { titleWidth?: string }) {
   return (
-    <header className="mb-8">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <Skeleton className="h-8" style={{ width: titleWidth }} />
-        <Skeleton className="h-3 w-32" />
+    <header className="page-header">
+      <div className="flex min-w-0 flex-col gap-3">
+        <Skeleton className="h-2.5 w-20" />
+        <Skeleton className="h-10 max-w-full" style={{ width: titleWidth }} />
+        <Skeleton className="h-3 w-60 max-w-full" />
       </div>
-      <hr className="rule-brand mt-4" />
     </header>
   );
 }
 
 /**
- * Stands in for a StatusNote. Matches min-h-44 and the card radius exactly, so
- * the grid does not reflow when the real cards arrive.
+ * Reserves the identity, headline and footer of the shared status card.
  */
 export function NoteSkeleton() {
   return (
     <div
       aria-hidden="true"
-      className="flex min-h-44 w-full flex-col gap-3 border p-4 pl-5"
+      className="flex min-h-[17rem] w-full flex-col gap-3 border p-5"
       style={{
         borderRadius: "var(--radius-card)",
         borderColor: "var(--line)",
@@ -46,10 +45,11 @@ export function NoteSkeleton() {
       }}
     >
       <div className="flex items-center gap-2">
-        <Skeleton className="size-2.5 rounded-full" />
+        <Skeleton className="size-9 rounded-full" />
         <Skeleton className="h-3.5 w-20" />
       </div>
-      <div className="flex flex-1 flex-col gap-2">
+      <Skeleton className="h-5 w-20" />
+      <div className="flex flex-1 flex-col gap-2 pt-1">
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-4/5" />
       </div>
@@ -65,7 +65,7 @@ export function NoteSkeleton() {
 export function NoteGridSkeleton({ count = 6 }: { count?: number }) {
   return (
     <div
-      className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-6"
+      className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-5"
       role="status"
       aria-label="Loading"
     >
