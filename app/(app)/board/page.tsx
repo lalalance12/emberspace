@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { BoardView } from "./board-view";
@@ -27,8 +28,14 @@ export default async function BoardPage() {
   return (
     <>
       <PageHeader
-        title="Board"
-        meta={`${members.length} on the team · ${statuses.length} posted`}
+        eyebrow="Your team, at a glance"
+        title="Team board"
+        description="See what's moving, who's focused, and where a little help could go a long way."
+        action={
+          <Link href="/me" className="btn btn-primary">
+            <span aria-hidden="true">+</span> Post update
+          </Link>
+        }
       />
 
       <BoardView
