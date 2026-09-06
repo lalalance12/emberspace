@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { ErrorNote, Field, Input, Toggle } from "@/components/ui/field";
-import { Panel } from "@/components/ui/page";
 import { messageForError } from "@/lib/rpc";
 import { createClient } from "@/lib/supabase/client";
 
@@ -71,9 +70,14 @@ export function MeSettingsForm({ profile }: { profile: Profile }) {
   }
 
   return (
-    <form onSubmit={onSave} className="flex max-w-lg flex-col gap-6">
-      <Panel className="flex flex-col gap-6 p-6">
-        <Field label="Name" hint="Shown on your card, in the timeline and on nudges.">
+    <form onSubmit={onSave} onChange={() => setSaved(false)} className="settings-stack">
+      <section className="settings-section" aria-labelledby="profile-heading">
+        <div className="settings-section-heading">
+          <h2 id="profile-heading">Your profile</h2>
+          <p>A familiar name and a way for teammates to reach you.</p>
+        </div>
+        <div className="settings-fields">
+        <Field label="Name" hint="How you appear across your workspace.">
           <Input
             required
             maxLength={60}
@@ -86,8 +90,8 @@ export function MeSettingsForm({ profile }: { profile: Profile }) {
         </Field>
 
         <Field
-          label="Where a nudge sends people"
-          hint="Workspace never carries the conversation. This is where it points."
+          label="Your message link"
+          hint="A link to your Slack, Discord, or wherever your team talks."
         >
           <Input
             type="url"
@@ -96,24 +100,35 @@ export function MeSettingsForm({ profile }: { profile: Profile }) {
             placeholder="https://slack.com/app_redirect?channel=you"
           />
         </Field>
+        </div>
+      </section>
 
-        <div className="flex flex-col gap-4">
-          <span className="annotation">Interruptions</span>
-          <Toggle checked={peer} onChange={setPeer}>
+      <section className="settings-section" aria-labelledby="preferences-heading">
+        <div className="settings-section-heading">
+          <h2 id="preferences-heading">Nudge preferences</h2>
+          <p>Choose how Workspace asks for your attention.</p>
+        </div>
+        <div className="settings-fields">
+          <div className="settings-preference">
+          <Toggle checked={peer} onChange={(value) => { setPeer(value); setSaved(false); }}>
             Let teammates nudge me
           </Toggle>
-          <Toggle checked={system} onChange={setSystem}>
+          <p>A small signal from a teammate to check your messages.</p>
+          </div>
+          <div className="settings-preference">
+          <Toggle checked={system} onChange={(value) => { setSystem(value); setSaved(false); }}>
             Ask me when my status goes stale
           </Toggle>
+          <p>A reminder to keep your update current, at your team&apos;s chosen pace.</p>
+          </div>
+          <div className="settings-form-footer">
+            <Button type="submit" disabled={pending}>
+              {pending ? "Saving…" : "Save preferences"}
+            </Button>
+            {saved && <span role="status" className="settings-success">Preferences saved</span>}
+          </div>
         </div>
-      </Panel>
-
-      <div className="flex items-center gap-4">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : "Save preferences"}
-        </Button>
-        {saved && <span className="annotation">Saved</span>}
-      </div>
+      </section>
 
       {error && <ErrorNote>{error}</ErrorNote>}
     </form>

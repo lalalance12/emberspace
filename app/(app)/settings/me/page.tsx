@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { MeSettingsForm } from "./me-settings-form";
 import { PasswordSettingsForm } from "./password-settings-form";
 import { PageHeader } from "@/components/ui/page";
+import { SettingsNav } from "@/components/settings-nav";
 import { getViewer } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Your settings" };
@@ -13,9 +14,14 @@ export default async function MeSettingsPage() {
 
   return (
     <>
-      <PageHeader title="Your settings" meta={viewer.profile.display_name} />
+      <PageHeader
+        eyebrow="Make yourself at home"
+        title="Your settings"
+        description="Your profile, your preferences, your pace."
+      />
+      <SettingsNav current="me" />
 
-      <div className="flex flex-col gap-10">
+      <div className="settings-content settings-stack">
         <MeSettingsForm profile={viewer.profile} />
         <PasswordSettingsForm />
       </div>

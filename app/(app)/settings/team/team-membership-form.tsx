@@ -103,21 +103,24 @@ export function TeamMembershipForm({
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="panel p-6">
-        <h2 className="text-xl">Move to another team</h2>
-        <p className="mt-1 mb-5 text-sm text-[var(--ink-soft)]">
+    <div className="settings-membership settings-stack">
+      <section className="settings-section">
+        <div className="settings-section-heading">
+        <h2>Move to another team</h2>
+        <p>
           Paste the eight-character code for the team you are joining. You leave{" "}
           {teamName} and arrive as a member.
         </p>
+        </div>
 
+        <div className="settings-fields">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             setError(null);
             setConfirming("switch");
           }}
-          className="flex flex-col gap-4"
+          className="settings-fields"
         >
           <Field label="Join code">
             <Input
@@ -135,7 +138,7 @@ export function TeamMembershipForm({
               autoComplete="off"
               spellCheck={false}
               disabled={busy}
-              className="text-center font-[family-name:var(--font-mono)] text-lg tracking-[0.35em] uppercase"
+              className="font-[family-name:var(--font-mono)] text-lg tracking-[0.25em] uppercase"
             />
           </Field>
 
@@ -164,28 +167,32 @@ export function TeamMembershipForm({
             testId="confirm-switch"
           />
         )}
+        </div>
       </section>
 
-      <section className="panel p-6">
-        <h2 className="text-xl">Leave {teamName}</h2>
-        <p className="mt-1 mb-5 text-sm text-[var(--ink-soft)]">
+      <section className="settings-section settings-section-danger">
+        <div className="settings-section-heading">
+        <h2>Leave this team</h2>
+        <p>
           You come off the board and land back on the join screen.{" "}
           {memberCount > 1
             ? `${memberCount - 1} other ${memberCount - 1 === 1 ? "person stays" : "people stay"} on the team.`
             : "Nobody else is on this team."}
         </p>
+        </div>
 
+        <div>
         {confirming !== "leave" ? (
           <Button
             type="button"
-            variant="ghost"
+            variant="quiet"
             onClick={() => {
               setError(null);
               setConfirming("leave");
             }}
             disabled={busy}
             data-testid="leave-team"
-            className="text-[var(--signal)]"
+            className="settings-danger-button"
           >
             Leave team
           </Button>
@@ -200,6 +207,7 @@ export function TeamMembershipForm({
             testId="confirm-leave"
           />
         )}
+        </div>
       </section>
 
       {error && <ErrorNote testId="membership-error">{error}</ErrorNote>}

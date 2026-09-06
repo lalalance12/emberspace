@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { ErrorNote, Field, Input, Toggle } from "@/components/ui/field";
-import { Panel } from "@/components/ui/page";
 import { RpcError, messageForError, rotateJoinCode } from "@/lib/rpc";
 import { createClient } from "@/lib/supabase/client";
 
@@ -55,6 +54,7 @@ export function TeamPolicyForm({ team }: { team: TeamPolicy }) {
   const [pending, setPending] = useState(false);
   const [rotating, setRotating] = useState(false);
   const [code, setCode] = useState(team.join_code);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
@@ -109,6 +109,7 @@ export function TeamPolicyForm({ team }: { team: TeamPolicy }) {
 
   async function onRotate() {
     setError(null);
+    setCopyFeedback(null);
     setRotating(true);
     try {
       const next = await rotateJoinCode(createClient());
@@ -124,34 +125,46 @@ export function TeamPolicyForm({ team }: { team: TeamPolicy }) {
     }
   }
 
+  async function onCopy() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopyFeedback("Copied");
+    } catch {
+      setCopyFeedback("Select the code to copy it.");
+    }
+  }
+
   return (
-    <div className="flex flex-col gap-6">
-      <Panel className="p-6">
-        <p className="annotation">Join code</p>
-        <p
-          className="gradient-text mt-3 font-[family-name:var(--font-mono)] text-3xl font-bold tracking-[0.28em]"
-          data-testid="join-code"
-        >
-          {code}
-        </p>
-        <p className="mt-4 text-sm text-[var(--ink-soft)]">
-          Anyone holding this can join. Rotating it invalidates the old one
-          immediately — people already on the team stay on it.
-        </p>
+    <div className="settings-stack">
+      <section className="settings-invite" aria-labelledby="invite-heading">
+        <div>
+          <h2 id="invite-heading">Make room for your team</h2>
+          <p>Share this join code to bring a teammate into your workspace. Anyone with the code can join.</p>
+          <p>Rotating it replaces the code immediately. Current members stay.</p>
+        </div>
+        <div className="settings-invite-code">
+          <code data-testid="join-code">{code}</code>
+          <div className="settings-code-actions">
+            <Button variant="quiet" type="button" onClick={() => void onCopy()} disabled={rotating}>Copy code</Button>
         <Button
-          variant="quiet"
+          variant="ghost"
           type="button"
           onClick={() => void onRotate()}
           disabled={rotating}
-          className="mt-4"
         >
           {rotating ? "Rotating…" : "Rotate code"}
         </Button>
-      </Panel>
+          </div>
+          {copyFeedback && <span className="settings-success" role="status">{copyFeedback}</span>}
+        </div>
+      </section>
 
-      <form onSubmit={onSave} className="flex flex-col gap-6">
-        <Panel className="flex flex-col gap-6 p-6">
-          <p className="annotation">Team</p>
+      <form onSubmit={onSave} onChange={() => setSaved(false)} className="settings-stack">
+        <section className="settings-section" aria-labelledby="team-name-heading">
+          <div className="settings-section-heading">
+            <h2 id="team-name-heading">Team details</h2>
+            <p>The name of the space you share.</p>
+          </div>
           <Field label="Name">
             <Input
               required
@@ -161,24 +174,25 @@ export function TeamPolicyForm({ team }: { team: TeamPolicy }) {
               data-testid="team-name"
             />
           </Field>
-        </Panel>
+        </section>
 
-        <Panel className="flex flex-col gap-6 p-6">
-          <div>
-            <p className="annotation">System nudges</p>
-            <p className="mt-2 text-sm text-[var(--ink-soft)]">
-              The scheduler asks people to update when their status has sat too
-              long. It never stacks — one open question at a time.
+        <section className="settings-section" aria-labelledby="system-nudges-heading">
+          <div className="settings-section-heading">
+            <h2 id="system-nudges-heading">Status reminders</h2>
+            <p>
+              Give your team a gentle reminder when an update needs a refresh.
             </p>
           </div>
 
-          <Toggle checked={system} onChange={setSystem}>
+          <div className="settings-fields">
+          <Toggle checked={system} onChange={(value) => { setSystem(value); setSaved(false); }}>
             Ask people to update when their status goes stale
           </Toggle>
 
+          <div className="settings-field-grid">
           <Field
             label="Stale after (minutes)"
-            hint={`When a status becomes eligible for a nudge. ${BOUNDS.stale_after_minutes.min}–${BOUNDS.stale_after_minutes.max}.`}
+            hint={`Send the first reminder after this long. ${BOUNDS.stale_after_minutes.min}–${BOUNDS.stale_after_minutes.max} minutes.`}
           >
             <Input
               type="number"
@@ -194,7 +208,7 @@ export function TeamPolicyForm({ team }: { team: TeamPolicy }) {
 
           <Field
             label="Re-nudge after (minutes)"
-            hint={`How long before the same person can be asked again, answered or not. ${BOUNDS.renudge_after_minutes.min}–${BOUNDS.renudge_after_minutes.max}.`}
+            hint={`Wait this long before asking again. ${BOUNDS.renudge_after_minutes.min}–${BOUNDS.renudge_after_minutes.max} minutes.`}
           >
             <Input
               type="number"
@@ -207,20 +221,23 @@ export function TeamPolicyForm({ team }: { team: TeamPolicy }) {
               data-testid="renudge-after"
             />
           </Field>
-        </Panel>
+          </div>
+          </div>
+        </section>
 
-        <Panel className="flex flex-col gap-6 p-6">
-          <div>
-            <p className="annotation">Peer nudges</p>
-            <p className="mt-2 text-sm text-[var(--ink-soft)]">
-              What one teammate can send another from the board. Set either
-              limit to 0 to switch peer nudging off for the whole team.
+        <section className="settings-section" aria-labelledby="peer-nudges-heading">
+          <div className="settings-section-heading">
+            <h2 id="peer-nudges-heading">Teammate nudges</h2>
+            <p>
+              Set a comfortable pace for getting each other&apos;s attention. Set either limit to 0 to turn these off.
             </p>
           </div>
 
+          <div className="settings-fields">
+          <div className="settings-field-grid">
           <Field
             label="Per person, per hour"
-            hint={`How often one teammate can nudge the same person. ${BOUNDS.peer_nudges_per_recipient_per_hour.min}–${BOUNDS.peer_nudges_per_recipient_per_hour.max}.`}
+            hint={`Nudges to the same teammate. ${BOUNDS.peer_nudges_per_recipient_per_hour.min}–${BOUNDS.peer_nudges_per_recipient_per_hour.max}.`}
           >
             <Input
               type="number"
@@ -235,7 +252,7 @@ export function TeamPolicyForm({ team }: { team: TeamPolicy }) {
 
           <Field
             label="Total, per hour"
-            hint={`How many nudges one person can send in total. ${BOUNDS.peer_nudges_per_hour.min}–${BOUNDS.peer_nudges_per_hour.max}.`}
+            hint={`All nudges one person can send. ${BOUNDS.peer_nudges_per_hour.min}–${BOUNDS.peer_nudges_per_hour.max}.`}
           >
             <Input
               type="number"
@@ -247,14 +264,16 @@ export function TeamPolicyForm({ team }: { team: TeamPolicy }) {
               data-testid="per-hour"
             />
           </Field>
-        </Panel>
+          </div>
 
-        <div className="flex items-center gap-4">
+        <div className="settings-form-footer">
           <Button type="submit" disabled={pending} data-testid="save-policy">
             {pending ? "Saving…" : "Save policy"}
           </Button>
-          {saved && <span className="annotation">Saved</span>}
+          {saved && <span role="status" className="settings-success">Policy saved</span>}
         </div>
+          </div>
+        </section>
 
         {error && <ErrorNote>{error}</ErrorNote>}
       </form>

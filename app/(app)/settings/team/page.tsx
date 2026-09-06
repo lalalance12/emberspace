@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { TeamMembershipForm } from "./team-membership-form";
 import { TeamPolicyForm, type TeamPolicy } from "./team-policy-form";
 import { PageHeader, Panel } from "@/components/ui/page";
+import { SettingsNav } from "@/components/settings-nav";
 import { getViewer } from "@/lib/queries";
 import { createClient } from "@/lib/supabase/server";
 
@@ -61,11 +62,25 @@ export default async function TeamSettingsPage() {
   return (
     <>
       <PageHeader
-        title={team.name}
-        meta={`${isHead ? "You are the head" : "Member"} · ${members.length} on the team`}
+        eyebrow="A shared space"
+        title="Team settings"
+        description="Keep your team connected, with room to focus."
       />
+      <SettingsNav current="team" />
 
-      <div className="flex max-w-xl flex-col gap-6">
+      <div className="settings-content">
+        <section className="settings-team-summary" aria-label="Your team">
+          <div className="settings-team-identity">
+            <span className="settings-team-symbol" aria-hidden="true">
+              {team.name.charAt(0).toUpperCase()}
+            </span>
+            <div>
+              <h2>{team.name}</h2>
+              <p>{members.length} {members.length === 1 ? "person" : "people"} sharing this workspace</p>
+            </div>
+          </div>
+          <span className="settings-role">{isHead ? "Team head" : "Team member"}</span>
+        </section>
         {isHead && <TeamPolicyForm team={team} />}
 
         <TeamMembershipForm

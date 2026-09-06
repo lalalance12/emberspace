@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ErrorNote, Field, Input } from "@/components/ui/field";
-import { Panel } from "@/components/ui/page";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -52,16 +51,17 @@ export function PasswordSettingsForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex max-w-lg flex-col gap-6">
-      <Panel className="flex flex-col gap-6 p-6">
-        <div>
-          <p className="annotation">Password</p>
-          <p className="mt-2 text-sm text-[var(--ink-soft)]">
-            Set one and you can sign in without waiting for an email. The link
-            keeps working either way.
+    <form onSubmit={onSubmit} onChange={() => setSaved(false)} className="settings-stack">
+      <section className="settings-section" aria-labelledby="password-heading">
+        <div className="settings-section-heading">
+          <h2 id="password-heading">Password</h2>
+          <p>
+            Keep your account secure with a password you don&apos;t use elsewhere.
           </p>
         </div>
 
+        <div className="settings-fields">
+        <div className="settings-field-grid">
         <Field label="New password" hint="At least 8 characters.">
           <Input
             type="password"
@@ -74,7 +74,7 @@ export function PasswordSettingsForm() {
           />
         </Field>
 
-        <Field label="Repeat it">
+        <Field label="Confirm password">
           <Input
             type="password"
             required
@@ -85,14 +85,16 @@ export function PasswordSettingsForm() {
             placeholder="••••••••"
           />
         </Field>
-      </Panel>
+        </div>
 
-      <div className="flex items-center gap-4">
+      <div className="settings-form-footer">
         <Button type="submit" variant="quiet" disabled={pending}>
           {pending ? "Saving…" : "Save password"}
         </Button>
-        {saved && <span className="annotation">Password updated</span>}
+        {saved && <span role="status" className="settings-success">Password updated</span>}
       </div>
+        </div>
+      </section>
 
       {error && <ErrorNote>{error}</ErrorNote>}
     </form>

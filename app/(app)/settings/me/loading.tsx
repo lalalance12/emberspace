@@ -1,22 +1,8 @@
 import { FieldSkeleton, PageHeaderSkeleton, Skeleton } from "@/components/ui/skeleton";
 
 export default function SettingsMeLoading() {
-  return (
-    <>
-      <PageHeaderSkeleton titleWidth="10rem" />
-
-      <div className="flex max-w-lg flex-col gap-10">
-        <div className="panel flex flex-col gap-6 p-6">
-          <FieldSkeleton />
-          <FieldSkeleton />
-          <Skeleton className="h-4 w-48" />
-          <Skeleton className="h-4 w-56" />
-        </div>
-        <div className="panel flex flex-col gap-6 p-6">
-          <FieldSkeleton />
-          <FieldSkeleton />
-        </div>
-      </div>
-    </>
-  );
+  return <><PageHeaderSkeleton titleWidth="12rem" /><div className="settings-tabs"><Skeleton className="h-8 w-40" /></div>
+    <div className="settings-content settings-stack" role="status" aria-label="Loading your settings">
+      {[0,1,2].map(i => <div key={i} className="settings-section"><div className="flex flex-col gap-4"><Skeleton className="h-6 w-32" /><Skeleton className="h-3 w-40 max-w-full" /></div><div className="settings-fields"><FieldSkeleton /><FieldSkeleton /></div></div>)}
+    </div></>;
 }
