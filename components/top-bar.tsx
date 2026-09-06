@@ -4,59 +4,55 @@ import { AccountMenu } from "@/components/account-menu";
 import { Wordmark } from "@/components/brand-mark";
 import { NavLinks, type NavItem } from "@/components/nav-links";
 import { NotificationBell } from "@/components/notification-bell";
+import { Icon } from "@/components/ui/icon";
 
-/**
- * Office is deliberately absent.
- *
- * The route still exists and still reads the real roster — it is parked until
- * after the presentation, not deleted. Leaving a nav item pointing at a screen
- * that says "not drawn yet" spends a click to deliver a disappointment, so it
- * comes back to the bar when the floor plan does.
- *
- * "Me" became "Status": next to Board and Timeline it read as an account page,
- * which is what /settings/me actually is.
- *
- * Team is in the bar for everyone now, not just the head. It used to be gated
- * because the page was nothing but head-only controls; it now also holds the
- * membership half — which team you are on, and how to leave or move to another
- * — and that belongs to whoever is standing in it.
- */
+// The office route stays off navigation until its floor plan is ready.
 const NAV: NavItem[] = [
-  { href: "/board", label: "Board" },
-  { href: "/me", label: "Status" },
-  { href: "/timeline", label: "Timeline" },
-  { href: "/settings/team", label: "Team" },
+  { href: "/board", label: "Board", icon: "board" },
+  { href: "/me", label: "My status", icon: "edit" },
+  { href: "/timeline", label: "Timeline", icon: "timeline" },
+];
+const SETTINGS: NavItem[] = [
+  { href: "/settings/team", label: "Team", icon: "team" },
+  { href: "/settings/me", label: "Settings", icon: "settings" },
 ];
 
-export function TopBar({
-  profileId,
-  displayName,
-  isHead,
-}: {
+export function TopBar({ profileId, displayName, isHead }: {
   profileId: string;
   displayName: string;
   isHead: boolean;
 }) {
   return (
-    <header
-      className="sticky top-0 z-40 border-b backdrop-blur-md"
-      style={{
-        borderColor: "var(--line)",
-        backgroundColor: "color-mix(in oklab, var(--surface) 82%, transparent)",
-      }}
-    >
-      <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-3">
-        <Link href="/board" className="flex items-center gap-2.5">
-          <Wordmark />
+    <>
+      <aside className="app-sidebar">
+        <Link href="/board" className="sidebar-brand" aria-label="Workspace board">
+          <Wordmark size={32} />
         </Link>
-
-        <NavLinks items={NAV} />
-
-        <div className="ml-auto flex items-center gap-2">
+        <div className="sidebar-navigation">
+          <p className="sidebar-label">Your workspace</p>
+          <NavLinks items={NAV} label="Workspace" />
+          <p className="sidebar-label sidebar-label-manage">Manage</p>
+          <NavLinks items={SETTINGS} label="Manage workspace" />
+        </div>
+        <div className="sidebar-bottom">
+          <div className="sidebar-note">
+            <Icon name="spark" />
+            <p>A little context.<br /><strong>A more connected team.</strong></p>
+            <Link href="/me">Share an update <Icon name="arrow" width={16} height={16} /></Link>
+          </div>
+          <span className="sidebar-caption">Make room for focused work.</span>
+        </div>
+      </aside>
+      <header className="app-topbar">
+        <Link href="/board" className="mobile-brand" aria-label="Workspace board"><Wordmark size={28} /></Link>
+        <div className="topbar-context"><Icon name="team" width={17} height={17} /><span>Your team space</span><span className="topbar-divider" /><span className="topbar-caption">Stay in the loop, at a glance.</span></div>
+        <div className="topbar-account">
           <NotificationBell profileId={profileId} />
+          <span className="topbar-divider" aria-hidden="true" />
           <AccountMenu displayName={displayName} isHead={isHead} />
         </div>
-      </div>
-    </header>
+      </header>
+      <div className="mobile-navigation"><NavLinks items={[...NAV, ...SETTINGS]} label="Mobile workspace" /></div>
+    </>
   );
 }

@@ -34,16 +34,16 @@ export function AccountMenu({
         <button
           type="button"
           aria-label={`Account: ${displayName}`}
-          className="flex items-center gap-2 rounded-full py-1 pr-3 pl-1 text-sm transition-colors duration-200 hover:bg-[var(--sunken)]"
+          className="account-trigger flex items-center gap-2.5 rounded-full py-1 pr-2 pl-1 text-sm transition-colors duration-200 hover:bg-[var(--sunken)]"
         >
           <span
             aria-hidden="true"
-            className="grid size-7 place-items-center rounded-full text-xs font-semibold text-white"
-            style={{ backgroundImage: "var(--gradient-brand)" }}
+            className="account-avatar grid size-9 place-items-center rounded-full text-sm font-semibold"
           >
             {initial}
           </span>
-          <span className="hidden sm:inline">{displayName}</span>
+          <span className="hidden max-w-40 truncate text-left sm:inline">{displayName}</span>
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m5 8 5 5 5-5" /></svg>
         </button>
       </PopoverTrigger>
 

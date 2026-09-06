@@ -33,13 +33,14 @@ export default async function AppLayout({
   if (!viewer.profile.team_id) redirect("/onboarding");
 
   return (
-    <div className="canvas-ambient min-h-dvh">
+    <div className="app-shell min-h-dvh">
+      <a className="skip-link" href="#main-content">Skip to content</a>
       <TopBar
         profileId={viewer.profile.id}
         displayName={viewer.profile.display_name}
         isHead={viewer.profile.role === "head"}
       />
-      <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+      <main id="main-content" className="app-main" tabIndex={-1}>{children}</main>
     </div>
   );
 }

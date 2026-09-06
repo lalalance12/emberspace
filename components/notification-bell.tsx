@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { markNotificationRead } from "@/lib/rpc";
 import { createClient } from "@/lib/supabase/client";
@@ -113,10 +114,10 @@ export function NotificationBell({ profileId }: { profileId: string }) {
   }
 
   return (
-    <div className="relative">
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-label={
           unread > 0 ? `${unread} unread notifications` : "Notifications"
@@ -134,15 +135,10 @@ export function NotificationBell({ profileId }: { profileId: string }) {
           </span>
         )}
       </button>
+      </PopoverTrigger>
 
       {open && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            aria-hidden="true"
-            onClick={() => setOpen(false)}
-          />
-          <div className="panel rise-in absolute right-0 z-50 mt-2 w-[22rem] overflow-hidden">
+          <PopoverContent aria-label="Notifications" align="end" sideOffset={14} className="w-[min(360px,calc(100vw-32px))] overflow-hidden p-0">
             <div
               className="flex items-center justify-between border-b px-4 py-2.5"
               style={{ borderColor: "var(--line)" }}
@@ -206,10 +202,9 @@ export function NotificationBell({ profileId }: { profileId: string }) {
                 ))}
               </ul>
             )}
-          </div>
-        </>
+          </PopoverContent>
       )}
-    </div>
+    </Popover>
   );
 }
 
