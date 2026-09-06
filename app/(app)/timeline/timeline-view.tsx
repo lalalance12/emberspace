@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { StatusNote, type NoteStatus } from "@/components/status-note";
+import { StatusDetail } from "@/components/status-detail";
 import { EmptyState } from "@/components/ui/page";
 import { decayFor } from "@/lib/staleness";
 import { STATUS_STATES, presentationFor, type StatusState } from "@/lib/status-state";
@@ -90,157 +91,87 @@ export function TimelineView({
 
   const wholeDay = fromHour === 0 && toHour === 23;
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="annotation mr-1">View</span>
-          {VIEWS.map((v) => (
-            <button
-              key={v.id}
-              type="button"
-              aria-pressed={view === v.id}
-              onClick={() => setView(v.id)}
-              className="chip"
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
+  const [openRow, setOpenRow] = useState<TimelineRow | null>(null);
+  const hasFilters = person !== null || state !== null || !wholeDay;
 
-        {peoplePresent.length > 1 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="annotation mr-1">Who</span>
-            <button
-              type="button"
-              aria-pressed={person === null}
-              onClick={() => setPerson(null)}
-              className="chip"
-            >
-              Everyone
-            </button>
-            {peoplePresent.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                aria-pressed={person === p.id}
-                onClick={() => setPerson(person === p.id ? null : p.id)}
-                className="chip"
-              >
-                {p.display_name}
+  function clearFilters() {
+    setPerson(null);
+    setState(null);
+    setFromHour(0);
+    setToHour(23);
+  }
+
+  return (
+    <div className="timeline-page">
+      <section className="timeline-controls" aria-label="Timeline controls">
+        <div className="timeline-view-toolbar">
+          <div>
+            <h2>Day in review</h2>
+            <p>{rows.length} update{rows.length === 1 ? "" : "s"} from {peoplePresent.length} teammate{peoplePresent.length === 1 ? "" : "s"}</p>
+          </div>
+          <div className="timeline-view-switch" role="group" aria-label="Timeline view">
+            {VIEWS.map((v) => (
+              <button key={v.id} type="button" aria-pressed={view === v.id} onClick={() => setView(v.id)}>
+                <ViewGlyph view={v.id} />{v.label}
               </button>
             ))}
           </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="annotation mr-1">State</span>
-          <button
-            type="button"
-            aria-pressed={state === null}
-            onClick={() => setState(null)}
-            className="chip"
-          >
-            Any
-          </button>
-          {STATUS_STATES.filter((s) => statesPresent.has(s)).map((s) => {
-            const look = presentationFor(s);
-            return (
-              <button
-                key={s}
-                type="button"
-                aria-pressed={state === s}
-                onClick={() => setState(state === s ? null : s)}
-                className="chip"
-                style={
-                  {
-                    "--state": look.accent,
-                    "--chip-ink": look.onAccent,
-                  } as React.CSSProperties
-                }
-              >
-                <span className="state-dot" aria-hidden="true" />
-                {look.label}
-              </button>
-            );
-          })}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="annotation mr-1">Hours</span>
-
-          <HourSelect
-            label="From"
-            value={fromHour}
-            onChange={(h) => {
-              setFromHour(h);
-              // Dragging the start past the end would silently empty the list.
-              if (h > toHour) setToHour(h);
-            }}
-          />
-          <span className="text-sm text-[var(--ink-soft)]">to</span>
-          <HourSelect
-            label="To"
-            value={toHour}
-            onChange={(h) => {
-              setToHour(h);
-              if (h < fromHour) setFromHour(h);
-            }}
-          />
-
-          {/* Snap to the hours that actually contain something — on a normal
-              day that trims the empty small hours off both ends. */}
-          {Number.isFinite(hoursPresent.first) && (
-            <button
-              type="button"
-              onClick={() => {
-                setFromHour(hoursPresent.first);
-                setToHour(hoursPresent.last);
-              }}
-              className="chip"
-            >
-              Active hours
-            </button>
-          )}
-
-          {!wholeDay && (
-            <button
-              type="button"
-              onClick={() => {
-                setFromHour(0);
-                setToHour(23);
-              }}
-              className="chip"
-            >
-              Whole day
-            </button>
-          )}
+        <div className="timeline-filters">
+          <label className="timeline-filter-field">
+            <span>Teammate</span>
+            <select className="input" value={person ?? ""} onChange={(event) => setPerson(event.target.value || null)}>
+              <option value="">Everyone</option>
+              {peoplePresent.map((p) => <option key={p.id} value={p.id}>{p.display_name}</option>)}
+            </select>
+          </label>
+          <label className="timeline-filter-field">
+            <span>Status</span>
+            <select className="input" value={state ?? ""} onChange={(event) => setState((event.target.value || null) as StatusState | null)}>
+              <option value="">All statuses</option>
+              {STATUS_STATES.filter((s) => statesPresent.has(s)).map((s) => <option key={s} value={s}>{presentationFor(s).label}</option>)}
+            </select>
+          </label>
+          <div className="timeline-filter-field timeline-hours-filter">
+            <span>Time range</span>
+            <div>
+              <HourSelect label="From" value={fromHour} onChange={(h) => { setFromHour(h); if (h > toHour) setToHour(h); }} />
+              <span className="timeline-hour-separator" aria-hidden="true">–</span>
+              <HourSelect label="To" value={toHour} onChange={(h) => { setToHour(h); if (h < fromHour) setFromHour(h); }} />
+            </div>
+          </div>
+          <div className="timeline-filter-actions">
+            {Number.isFinite(hoursPresent.first) && <button type="button" onClick={() => { setFromHour(hoursPresent.first); setToHour(hoursPresent.last); }} className="btn btn-ghost">Active hours</button>}
+            {hasFilters && <button type="button" onClick={clearFilters} className="btn btn-ghost">Reset</button>}
+          </div>
         </div>
+      </section>
+
+      <div className="timeline-results-heading">
+        <h2>{view === "people" ? "By teammate" : view === "hours" ? "Hour by hour" : "All updates"}<span className="count-badge">{visible.length}</span></h2>
+        <span>{view === "people" ? "Oldest to newest, for each person" : "Newest updates first"}</span>
       </div>
 
-      <hr className="rule-brand" />
-
       {visible.length === 0 ? (
-        <EmptyState
-          title="Nothing matches that"
-          hint="Loosen a filter, or pick Everyone and Any."
-        />
+        <EmptyState title="No updates in this view" hint="Try a different teammate, status, or time range." action={<button type="button" className="btn btn-quiet" onClick={clearFilters}>Clear filters</button>} />
       ) : view === "cards" ? (
-        <CardsView rows={visible} nameFor={nameFor} now={serverNow} />
+        <CardsView rows={visible} nameFor={nameFor} now={serverNow} onOpen={setOpenRow} />
       ) : view === "people" ? (
-        <PeopleView
-          rows={visible}
-          people={peoplePresent}
-          nameFor={nameFor}
-          now={serverNow}
-        />
+        <PeopleView rows={visible} people={peoplePresent} nameFor={nameFor} now={serverNow} />
       ) : (
         <HoursView rows={visible} nameFor={nameFor} now={serverNow} />
       )}
+      <StatusDetail status={openRow} name={openRow ? nameFor.get(openRow.profile_id) ?? "Teammate" : ""} now={serverNow} isSelf={false} open={openRow !== null} onClose={() => setOpenRow(null)} />
     </div>
   );
 }
 
+function ViewGlyph({ view }: { view: View }) {
+  return <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    {view === "cards" ? <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></> : view === "people" ? <><circle cx="8" cy="7" r="3" /><path d="M2 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M17 13a5 5 0 0 1 5 5v3" /></> : <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>}
+  </svg>;
+}
 /* ------------------------------------------------------------------------- */
 
 /** A bare hour picker. 24 options, labelled in the viewer's own clock format. */
@@ -275,13 +206,15 @@ function CardsView({
   rows,
   nameFor,
   now,
+  onOpen,
 }: {
   rows: TimelineRow[];
   nameFor: NameFor;
   now: number;
+  onOpen: (row: TimelineRow) => void;
 }) {
   return (
-    <ol className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-6">
+    <ol className="status-card-grid">
       {rows.map((row, i) => (
         <li
           key={row.id}
@@ -292,6 +225,7 @@ function CardsView({
             status={row}
             name={nameFor.get(row.profile_id) ?? "Someone"}
             now={now}
+            onOpen={() => onOpen(row)}
           />
         </li>
       ))}
@@ -324,8 +258,9 @@ function PeopleView({
         }))
         .filter((lane) => lane.items.length > 0)
         .map(({ person, items }) => (
-          <section key={person.id} className="flex flex-col gap-3">
-            <div className="flex items-baseline gap-3">
+          <section key={person.id} className="timeline-person-lane">
+            <div className="timeline-lane-heading">
+              <span className="timeline-person-avatar" aria-hidden="true">{person.display_name.trim().slice(0, 1).toUpperCase()}</span>
               <h2 className="text-lg">{nameFor.get(person.id) ?? "Someone"}</h2>
               <span className="annotation">
                 {items.length} update{items.length === 1 ? "" : "s"}
@@ -369,7 +304,7 @@ function HoursView({
   return (
     <div className="flex flex-col gap-6">
       {buckets.map(([hour, list]) => (
-        <section key={hour} className="grid gap-3 sm:grid-cols-[5rem_1fr]">
+        <section key={hour} className="timeline-hour-lane">
           <div className="flex items-baseline gap-2 sm:flex-col sm:items-end sm:gap-1">
             <span className="annotation">{formatHour(hour)}</span>
             {/* A bar, so the quiet hours look quiet. */}
@@ -379,7 +314,7 @@ function HoursView({
               style={{
                 width: `${Math.max((list.length / busiest) * 100, 12)}%`,
                 minWidth: "0.75rem",
-                backgroundImage: "var(--gradient-brand)",
+                background: "var(--violet)",
                 opacity: 0.35 + 0.65 * (list.length / busiest),
               }}
             />
@@ -418,11 +353,12 @@ function StopRow({
   who?: string;
 }) {
   const look = presentationFor(row.state);
+  const label = row.state === "other" && row.custom_label ? row.custom_label : look.label;
   const decay = decayFor({ startedAt: row.started_at, state: row.state, now });
 
   return (
     <li
-      className="flex items-start gap-3 border-l py-2.5 pl-4"
+      className="timeline-stop"
       style={{ borderColor: "var(--line)" }}
     >
       <span
@@ -439,17 +375,18 @@ function StopRow({
         {formatTime(row.started_at)}
       </span>
 
-      <span className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1">
         <span className="block text-sm">
           {who && <span className="font-medium">{who} · </span>}
-          {row.note ?? look.label}
+          {row.note ?? label}
         </span>
         <span className="annotation mt-0.5 block">
-          {look.label}
+          {label}
           {row.ticket_ref ? ` · ${row.ticket_ref}` : ""}
           {` · ${decay.age} ago`}
         </span>
-      </span>
+        {row.details && <p className="timeline-stop-details">{row.details}</p>}
+      </div>
     </li>
   );
 }

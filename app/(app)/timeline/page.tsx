@@ -57,7 +57,7 @@ export default async function TimelinePage({
     supabase
       .from("status_updates")
       .select(
-        "id, profile_id, state, note, ticket_ref, duration_minutes, custom_label, started_at",
+        "id, profile_id, state, note, ticket_ref, duration_minutes, custom_label, details, started_at",
       )
       .eq("team_id", viewer.profile.team_id)
       .gte("started_at", from.toISOString())
@@ -79,19 +79,16 @@ export default async function TimelinePage({
   return (
     <>
       <PageHeader
+        eyebrow="The story of the day"
         title="Timeline"
-        meta={`${count} update${count === 1 ? "" : "s"}`}
+        description="Catch up on how work moved, one update at a time."
+        action={<TimelineDatePicker selected={isoDay(from)} isToday={isToday} />}
       />
-
-      {/* The day lives in the URL; the picker just pushes it. */}
-      <div className="mb-6">
-        <TimelineDatePicker selected={isoDay(from)} isToday={isToday} />
-      </div>
 
       {count === 0 ? (
         <EmptyState
           title={isToday ? "Nothing posted today yet" : "Nothing posted that day"}
-          hint="Pick another day, or post an update and it lands here."
+          hint={isToday ? "Your team's updates will collect here as the day unfolds." : "Choose another day to see what your team was working on."}
           action={
             isToday ? (
               <Link href="/me" className="btn btn-primary">

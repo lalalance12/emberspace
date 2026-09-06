@@ -53,7 +53,7 @@ export function TimelineDatePicker({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="timeline-date-picker">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger className="btn btn-quiet gap-2" aria-label="Choose a day">
           <CalendarGlyph />
@@ -93,7 +93,7 @@ export function TimelineDatePicker({
         </button>
       )}
 
-      <span className="annotation ml-auto">{selected}</span>
+      <span className="timeline-selected-date">{selected}</span>
     </div>
   );
 }
