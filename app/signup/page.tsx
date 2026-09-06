@@ -11,14 +11,14 @@ export default function SignupPage() {
     <AuthShell
       title={
         <>
-          Start <span className="gradient-text">posting</span>.
+          Create your account.
         </>
       }
       subtitle="Create an account, then join a team or start one."
       footer={
         <>
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-[var(--violet)] underline">
+          <Link href="/login" className="public-text-link">
             Sign in
           </Link>
         </>

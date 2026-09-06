@@ -55,7 +55,7 @@ export function SignInForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit} className="public-entry-form">
       <Field label="Email">
         <Input
           type="email"

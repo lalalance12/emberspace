@@ -22,14 +22,14 @@ export default async function LoginPage({
     <AuthShell
       title={
         <>
-          Welcome <span className="gradient-text">back</span>.
+          Welcome back.
         </>
       }
       subtitle="Sign in to see what everyone is working on."
       footer={
         <>
           New to Workspace?{" "}
-          <Link href="/signup" className="font-medium text-[var(--violet)] underline">
+          <Link href="/signup" className="public-text-link">
             Create an account
           </Link>
         </>
@@ -38,8 +38,8 @@ export default async function LoginPage({
       {error === "auth" && (
         <div className="mb-5">
           <ErrorNote>
-            That sign-in link didn&rsquo;t work. It may have expired or already
-            been used — sign in below, or send yourself a new one.
+            That sign-in link has expired or has already been used. Sign in
+            with your email and password below.
           </ErrorNote>
         </div>
       )}

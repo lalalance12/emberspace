@@ -50,25 +50,18 @@ export function OnboardingChoice() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-6 md:grid-cols-2">
+    <div className="public-onboarding-choices">
+      <div className="public-choice-grid">
         {/* Joining is the common path, so it carries the brand weight. */}
         <section
-          className="panel relative overflow-hidden p-6"
-          style={{
-            backgroundImage:
-              "linear-gradient(160deg, color-mix(in oklab, var(--violet) 7%, var(--surface)) 0%, var(--surface) 62%)",
-          }}
+          className="public-choice public-choice-join"
+          aria-labelledby="join-title"
         >
-          <span
-            aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-0.5"
-            style={{ backgroundImage: "var(--gradient-brand)" }}
-          />
-          <p className="annotation">Someone invited you</p>
-          <h2 className="mt-2 mb-1 text-xl">Join a team</h2>
-          <p className="mb-6 text-sm text-[var(--ink-soft)]">
-            Paste the eight-character code from whoever runs the board.
+          <div className="public-choice-icon" aria-hidden="true"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3" /><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v2" /></svg></div>
+          <p className="public-overline">Have an invitation?</p>
+          <h2 id="join-title">Join your team</h2>
+          <p className="public-choice-description">
+            Your teammates are already here. Enter the eight-character code they shared with you.
           </p>
 
           <form
@@ -76,7 +69,7 @@ export function OnboardingChoice() {
               e.preventDefault();
               void run("join", () => joinTeam(createClient(), joinCode));
             }}
-            className="flex flex-col gap-4"
+            className="public-entry-form"
           >
             <Field label="Join code">
               <Input
@@ -87,7 +80,7 @@ export function OnboardingChoice() {
                 maxLength={8}
                 autoComplete="off"
                 spellCheck={false}
-                className="text-center font-[family-name:var(--font-mono)] text-lg tracking-[0.35em] uppercase"
+                className="public-join-code"
               />
             </Field>
             <Button type="submit" disabled={pending !== null} data-testid="join-team">
@@ -96,11 +89,12 @@ export function OnboardingChoice() {
           </form>
         </section>
 
-        <section className="panel p-6">
-          <p className="annotation">Nobody did</p>
-          <h2 className="mt-2 mb-1 text-xl">Start one</h2>
-          <p className="mb-6 text-sm text-[var(--ink-soft)]">
-            You become its head, and you get the join code to hand out.
+        <section className="public-choice" aria-labelledby="create-title">
+          <div className="public-choice-icon" aria-hidden="true"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" /><path d="M12 8v8M8 12h8" /></svg></div>
+          <p className="public-overline">Bring everyone together</p>
+          <h2 id="create-title">Start a new team</h2>
+          <p className="public-choice-description">
+            Give your team a home. Create a board and invite your teammates with a shared join code.
           </p>
 
           <form
@@ -110,7 +104,7 @@ export function OnboardingChoice() {
                 createTeam(createClient(), teamName.trim()),
               );
             }}
-            className="flex flex-col gap-4"
+            className="public-entry-form"
           >
             <Field label="Team name">
               <Input

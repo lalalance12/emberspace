@@ -70,27 +70,27 @@ export function SignupForm() {
 
   if (needsConfirmation) {
     return (
-      <div className="panel rise-in p-6">
+      <div className="public-confirmation rise-in" role="status">
         <span
           aria-hidden="true"
           className="mb-4 block h-1 w-10 rounded-full"
-          style={{ backgroundImage: "var(--gradient-brand)" }}
+          style={{ background: "var(--violet)" }}
         />
-        <p className="text-lg font-medium">Account made, but not active yet</p>
+        <p className="text-lg font-medium">Check your email</p>
         <p className="mt-2 text-sm text-[var(--ink-soft)]">
-          This project still has email confirmation switched on, so we sent a
-          link to {email} and the account stays inert until it is opened.
+          We sent a confirmation link to <strong>{email}</strong>. Open it to
+          activate your account and choose your team.
         </p>
-        <p className="annotation mt-4">
-          Turn it off: Supabase → Authentication → Sign In / Providers → Email →
-          Confirm email
+        <p className="mt-4 text-sm text-[var(--ink-soft)]">
+          Can&rsquo;t find the email? Check your spam folder or ask your team
+          admin for help.
         </p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit} className="public-entry-form">
       <Field label="Name" hint="What your team sees on your card.">
         <Input
           required
@@ -99,7 +99,7 @@ export function SignupForm() {
           maxLength={60}
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
-          placeholder="Lance"
+          placeholder="Your name"
           data-testid="name"
         />
       </Field>
