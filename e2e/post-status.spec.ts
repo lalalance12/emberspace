@@ -40,11 +40,16 @@ test("sign in, post a status, see it on the board", async ({ page }) => {
   // Blocked is painted in the blocked state colour and is exempt from decay.
   // The expected value is read back from the token rather than hardcoded, so a
   // palette change moves the test with the design instead of breaking it.
-  const blocked = await page.evaluate(() =>
-    getComputedStyle(document.documentElement)
-      .getPropertyValue("--color-state-blocked")
-      .trim(),
-  );
+  const blocked = await page.evaluate(() => {
+    // Resolve the token through a rendered color property so hex and OKLCH
+    // palettes are compared using the browser's computed-color format.
+    const swatch = document.createElement("span");
+    swatch.style.backgroundColor = "var(--color-state-blocked)";
+    document.body.append(swatch);
+    const color = getComputedStyle(swatch).backgroundColor;
+    swatch.remove();
+    return color;
+  });
   expect(blocked).not.toBe("");
   await expect(card).toHaveCSS("background-color", blocked);
   await expect(card).toHaveAttribute("data-blocked", "true");
@@ -73,7 +78,7 @@ test("create an account, start a team, land on the board", async ({ page }) => {
   await page.getByTestId("create-team").click();
 
   await expect(page).toHaveURL(/\/board$/);
-  await expect(page.getByText("Nothing pinned yet")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "A fresh board for your team" })).toBeVisible();
 
   // Team is in the nav for everyone now — members go there to leave or move —
   // so this asserts the bar rendered, not that the account is a head. What is
