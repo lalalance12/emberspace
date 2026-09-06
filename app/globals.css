@@ -24,25 +24,25 @@
 
 @theme {
   /* --- Ground ------------------------------------------------------------ */
-  --color-canvas: oklch(97.8% 0.009 300); /* off-white, violet cast */
-  --color-surface: oklch(99.4% 0.004 300); /* cards, popovers */
-  --color-sunken: oklch(95.4% 0.014 300); /* insets, hovers */
+  --color-canvas: #f7f7fb;
+  --color-surface: #ffffff;
+  --color-sunken: #f0edf7;
 
   /* --- Ink --------------------------------------------------------------- */
-  --color-ink: oklch(26% 0.055 295); /* deep violet-black */
-  --color-ink-soft: oklch(52% 0.035 295); /* secondary text */
-  --color-ink-faint: oklch(68% 0.025 295); /* annotations */
+  --color-ink: #29243c;
+  --color-ink-soft: #716b83;
+  --color-ink-faint: #777083;
 
   /* --- Brand ------------------------------------------------------------- */
-  --color-violet: oklch(55% 0.235 295); /* primary */
-  --color-violet-deep: oklch(44% 0.22 288); /* gradient end */
-  --color-violet-lift: oklch(70% 0.17 300); /* gradient start */
+  --color-violet: #7351d7;
+  --color-violet-deep: #382765;
+  --color-violet-lift: #9477e5;
 
   /* --- State hues -------------------------------------------------------- */
   /* Matched lightness and chroma so the board reads as one system. */
-  --color-state-working: oklch(55% 0.235 295); /* violet */
+  --color-state-working: #7351d7; /* violet */
   --color-state-reviewing: oklch(62% 0.16 235); /* blue */
-  --color-state-blocked: oklch(60% 0.215 22); /* signal */
+  --color-state-blocked: #cf334b; /* keeps white status text readable */
   --color-state-meeting: oklch(72% 0.16 65); /* amber */
   --color-state-break: oklch(66% 0.15 165); /* mint */
   --color-state-off: oklch(62% 0.03 295); /* quiet violet-grey */
@@ -56,7 +56,7 @@
   /* --- Geometry ---------------------------------------------------------- */
   /* The drafting-paper era capped radius at 2px. This one is soft: cards are
      objects you could pick up, not cells in a table. */
-  --radius-card: 14px;
+  --radius-card: 16px;
   --radius-control: 10px;
   --radius-pill: 999px;
 }
@@ -86,8 +86,8 @@
   );
 
   /* Hairlines: violet-tinted, never neutral grey. */
-  --line: color-mix(in oklab, var(--ink) 12%, transparent);
-  --line-strong: color-mix(in oklab, var(--ink) 22%, transparent);
+  --line: #e8e5ef;
+  --line-strong: #d5cede;
 }
 
 html,
@@ -126,18 +126,6 @@ h3 {
 --------------------------------------------------------------------------- */
 .canvas-ambient {
   background-color: var(--canvas);
-  background-image:
-    radial-gradient(
-      62rem 30rem at 8% -14%,
-      color-mix(in oklab, var(--violet) 8%, transparent) 0%,
-      transparent 58%
-    ),
-    radial-gradient(
-      44rem 24rem at 98% -6%,
-      color-mix(in oklab, var(--color-state-reviewing) 6%, transparent) 0%,
-      transparent 55%
-    );
-  background-attachment: fixed;
 }
 
 /* ---------------------------------------------------------------------------
@@ -146,7 +134,7 @@ h3 {
 .annotation {
   font-family: var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.075em;
   font-size: 0.6875rem;
   color: var(--ink-faint);
 }
@@ -175,9 +163,7 @@ h3 {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  box-shadow:
-    0 1px 2px color-mix(in oklab, var(--ink) 6%, transparent),
-    0 8px 24px -16px color-mix(in oklab, var(--ink) 30%, transparent);
+  box-shadow: 0 3px 12px -6px rgb(41 36 60 / 7%);
 }
 
 /* A one-pixel rule that carries the brand instead of being grey. */
@@ -205,8 +191,9 @@ h3 {
   cursor: pointer;
   border-radius: var(--radius-control);
   font-size: 0.875rem;
-  font-weight: 500;
-  padding: 0.625rem 1rem;
+  font-weight: 600;
+  min-height: 2.75rem;
+  padding: 0.625rem 1.125rem;
   transition:
     transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
     box-shadow 200ms ease,
@@ -226,13 +213,14 @@ h3 {
 /* The brand gradient appears on the primary action and in the wordmark.
    Nowhere else — spend the boldness in one place. */
 .btn-primary {
-  background-image: var(--gradient-brand);
+  background: var(--violet);
   color: white;
   box-shadow:
     0 1px 2px color-mix(in oklab, var(--ink) 12%, transparent),
     0 10px 22px -12px var(--violet);
 }
 .btn-primary:hover:not(:disabled) {
+  background: #6240c3;
   transform: translateY(-1px);
   box-shadow:
     0 1px 2px color-mix(in oklab, var(--ink) 12%, transparent),
@@ -265,7 +253,7 @@ h3 {
   color: var(--ink);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-control);
-  padding: 0.625rem 0.875rem;
+  padding: 0.75rem 0.875rem;
   outline: none;
   transition:
     border-color 200ms ease,
@@ -659,9 +647,9 @@ dialog.dialog[open] {
    in the DOM, so staleness stays legible with every animation removed.
 --------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  html:not(:has(.landing-experience[data-motion="full"])) *,
+  html:not(:has(.landing-experience[data-motion="full"])) *::before,
+  html:not(:has(.landing-experience[data-motion="full"])) *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

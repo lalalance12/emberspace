@@ -1,0 +1,158 @@
+/* Status editing and settings share a calm, structured working surface. */
+.status-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  align-items: start;
+  gap: 1.75rem;
+}
+
+.status-editor,
+.settings-stack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.status-section,
+.settings-section,
+.settings-invite,
+.settings-team-summary {
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  background: var(--surface, #fff);
+}
+
+.status-section { padding: 1.75rem; }
+.status-section-heading { margin-bottom: 1.5rem; }
+.status-section-heading h2,
+.settings-section-heading h2,
+.settings-invite h2 { font-size: 1.2rem; line-height: 1.35; }
+.status-section-heading p,
+.settings-section-heading p,
+.settings-invite p { margin-top: .45rem; color: var(--ink-soft); font-size: .875rem; line-height: 1.65; }
+.status-fields,
+.settings-fields { display: flex; min-width: 0; flex-direction: column; gap: 1.35rem; }
+.status-state-field { min-width: 0; margin-bottom: 1.5rem; }
+.status-state-field legend { margin-bottom: .75rem; }
+.status-state-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
+.status-state-choice {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  min-height: 2.9rem;
+  border: 1px solid var(--line);
+  border-radius: .75rem;
+  background: var(--surface, #fff);
+  padding: .65rem .85rem;
+  color: var(--ink-soft);
+  font-size: .825rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, color .16s ease;
+}
+.status-state-choice:hover { border-color: var(--violet); background: var(--canvas); }
+.status-state-choice[aria-pressed="true"] {
+  border-color: var(--violet);
+  background: color-mix(in oklab, var(--violet) 8%, white);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--violet);
+}
+.status-state-choice .state-dot { background: var(--state); flex-shrink: 0; }
+.status-state-check { margin-left: auto; width: .9rem; height: .9rem; color: var(--violet); flex-shrink: 0; }
+.status-note-input { font-family: var(--font-display); font-size: 1.125rem; line-height: 1.5; }
+.status-field-meta { display: flex; justify-content: space-between; gap: .75rem; }
+.status-field-meta > :last-child { white-space: nowrap; font-family: var(--font-mono); font-size: .7rem; }
+.status-timing-grid,
+.settings-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+.status-save-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: .4rem 0; }
+.status-save-bar p { color: var(--ink-soft); font-size: .8rem; }
+.status-preview { position: sticky; top: 2rem; display: flex; flex-direction: column; gap: 1.6rem; min-width: 0; }
+.status-preview-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: 1.35rem; }
+.status-preview-header h2 { font-family: var(--font-body); font-size: .9rem; font-weight: 600; }
+.status-preview-live { display: inline-flex; align-items: center; gap: .35rem; color: var(--ink-soft); font-size: .7rem; }
+.status-preview-live::before { content: ""; width: .35rem; height: .35rem; border-radius: 50%; background: var(--violet); }
+.status-preview-caption { margin-top: 1rem; color: var(--ink-soft); font-size: .8rem; line-height: 1.65; }
+.status-preview-empty { display: flex; min-height: 15rem; flex-direction: column; justify-content: center; align-items: center; gap: .65rem; border: 1px dashed var(--line-strong); border-radius: 1rem; padding: 1.5rem; background: color-mix(in oklab, var(--violet) 3%, white); text-align: center; }
+.status-preview-empty svg { width: 2rem; height: 2rem; margin-bottom: .4rem; color: var(--violet); }
+.status-preview-empty h3 { font-size: 1.1rem; }
+.status-preview-empty p { color: var(--ink-soft); font-size: .825rem; line-height: 1.6; }
+.status-recent { padding-top: 1.5rem; border-top: 1px solid var(--line); }
+.status-recent h2 { font-size: 1rem; }
+.status-recent > p { color: var(--ink-soft); font-size: .8rem; margin: .35rem 0 1rem; }
+.status-recent-list { display: flex; flex-direction: column; gap: .5rem; }
+.status-recent-pick { display: flex; align-items: flex-start; gap: .65rem; border: 1px solid var(--line); border-radius: .8rem; background: var(--surface, #fff); padding: .85rem; text-align: left; cursor: pointer; }
+.status-recent-pick:hover { border-color: var(--violet); background: color-mix(in oklab, var(--violet) 4%, white); }
+.status-recent-pick .state-dot { margin-top: .3rem; background: var(--state); flex-shrink: 0; }
+.status-recent-pick span:last-child { min-width: 0; overflow-wrap: anywhere; font-size: .825rem; line-height: 1.5; }
+.status-saved { display: flex; align-items: center; gap: .45rem; color: var(--violet); font-size: .8rem; }
+
+.settings-tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--line); margin: -.4rem 0 1.75rem; }
+.settings-tabs a { position: relative; padding: .85rem 1.25rem; color: var(--ink-soft); font-size: .875rem; font-weight: 500; text-decoration: none; }
+.settings-tabs a[aria-current="page"] { color: var(--violet); }
+.settings-tabs a[aria-current="page"]::after { content: ""; position: absolute; right: 1rem; bottom: -1px; left: 1rem; height: 3px; border-radius: 3px 3px 0 0; background: var(--violet); }
+.settings-tabs a:hover { color: var(--violet); }
+.settings-content { max-width: 65rem; }
+.settings-section { display: grid; grid-template-columns: minmax(10rem, .7fr) minmax(0, 1.5fr); gap: 2.5rem; padding: 1.75rem; }
+.settings-section-heading { max-width: 15rem; }
+.settings-section-heading .annotation { display: block; margin-bottom: .55rem; color: var(--violet); }
+.settings-form-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.settings-success { font-size: .8rem; color: var(--violet); }
+.settings-preference { padding-bottom: 1.2rem; border-bottom: 1px solid var(--line); }
+.settings-preference:last-child { padding-bottom: 0; border-bottom: 0; }
+.settings-preference > p { margin-top: .5rem; padding-left: 1.75rem; color: var(--ink-soft); font-size: .8rem; line-height: 1.6; }
+.settings-team-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.25rem; padding: 1.5rem 1.75rem; margin-bottom: 1.25rem; }
+.settings-team-identity { display: flex; align-items: center; gap: 1rem; min-width: 0; }
+.settings-team-symbol { display: grid; place-items: center; flex-shrink: 0; width: 3rem; height: 3rem; border-radius: .9rem; background: color-mix(in oklab, var(--violet) 10%, white); color: var(--violet); font-family: var(--font-display); font-size: 1.45rem; font-weight: 600; }
+.settings-team-identity h2 { font-size: 1.2rem; overflow-wrap: anywhere; }
+.settings-team-identity p { margin-top: .25rem; color: var(--ink-soft); font-size: .8rem; }
+.settings-role { border: 1px solid var(--line); border-radius: 2rem; padding: .35rem .75rem; font-size: .75rem; color: var(--ink-soft); }
+.settings-invite { display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: center; padding: 1.75rem; background: color-mix(in oklab, var(--violet) 6%, white); border-color: color-mix(in oklab, var(--violet) 18%, white); }
+.settings-invite > div:first-child { max-width: 29rem; }
+.settings-invite-code { display: flex; flex-direction: column; align-items: flex-start; gap: .85rem; }
+.settings-invite-code code { display: block; color: var(--violet); font-family: var(--font-mono); font-size: 1.55rem; font-weight: 500; letter-spacing: .2em; white-space: nowrap; }
+.settings-code-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.settings-code-actions .btn { min-height: 2.25rem; padding: .45rem .75rem; font-size: .75rem; }
+.settings-membership { margin-top: 1.5rem; }
+.settings-section-danger { border-color: color-mix(in oklab, var(--signal) 22%, white); }
+.settings-section-danger .settings-section-heading h2 { color: var(--signal); }
+.settings-danger-button { color: var(--signal); border: 1px solid color-mix(in oklab, var(--signal) 25%, white); background: var(--surface, #fff); }
+.settings-confirmation { margin-top: 1rem; border: 1px solid color-mix(in oklab, var(--signal) 25%, white); border-radius: .8rem; background: color-mix(in oklab, var(--signal) 4%, white); padding: 1rem; }
+
+@media (min-width: 1350px) { .status-state-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 1100px) {
+  .status-workspace { grid-template-columns: minmax(0, 1fr) 16rem; gap: 1.25rem; }
+  .status-section { padding: 1.4rem; }
+  .settings-section { grid-template-columns: minmax(9rem, .65fr) minmax(0, 1.5fr); gap: 1.75rem; }
+  .settings-invite { grid-template-columns: 1fr; }
+  .settings-invite-code { flex-direction: row; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+}
+@media (max-width: 850px) {
+  .status-workspace { grid-template-columns: minmax(0, 1fr); }
+  .status-preview { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+  .status-recent { padding-top: 0; border-top: 0; }
+}
+@media (max-width: 620px) {
+  .status-editor .input, .settings-content .input { font-size: 16px; }
+  .status-section,
+  .settings-section,
+  .settings-invite { padding: 1.2rem; border-radius: 1rem; }
+  .settings-section { grid-template-columns: minmax(0, 1fr); gap: 1.4rem; }
+  .settings-section-heading { max-width: none; }
+  .status-timing-grid,
+  .settings-field-grid,
+  .status-preview { grid-template-columns: minmax(0, 1fr); }
+  .status-save-bar { align-items: stretch; flex-direction: column-reverse; }
+  .status-save-bar .btn { width: 100%; }
+  .status-save-bar p { text-align: center; }
+  .settings-team-summary { padding: 1.2rem; }
+  .settings-invite-code code { font-size: 1.4rem; }
+  .settings-form-footer { align-items: stretch; }
+  .settings-form-footer .btn { flex-grow: 1; }
+  .status-recent { padding-top: 1.25rem; border-top: 1px solid var(--line); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-state-choice { transition: none; }
+}

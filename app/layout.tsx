@@ -3,6 +3,11 @@ import { Bricolage_Grotesque, IBM_Plex_Mono, Instrument_Sans } from "next/font/g
 
 import { siteURL } from "@/lib/site-url";
 import "./globals.css";
+import "./app-shell.css";
+import "./board-pages.css";
+import "./settings-pages.css";
+import "./public-pages.css";
+import "./landing-motion.css";
 
 /**
  * Three faces, three jobs.
@@ -83,7 +88,7 @@ export const viewport: Viewport = {
   // --canvas, in the one spelling browser chrome understands. Android's toolbar
   // and the iOS status bar take this; unset, they put a strip of default grey
   // above a warm off-white page — the exact seam the palette exists to avoid.
-  themeColor: "#f8f6fd",
+  themeColor: "#f7f7fb",
 };
 
 export default function RootLayout({
