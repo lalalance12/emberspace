@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
-import { EmptyState, PageHeader } from "@/components/ui/page";
+import { PageHeader } from "@/components/ui/page";
 import { getBoardData, getViewer } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Office" };
@@ -21,12 +22,20 @@ export default async function OfficePage() {
 
   return (
     <>
-      <PageHeader title="Office" meta="Floor plan" />
+      <PageHeader eyebrow="A place for everyone" title="Office" description="A shared space to see your team together." />
 
-      <EmptyState
-        title="The floor plan comes next"
-        hint={`${members.length} desk${members.length === 1 ? "" : "s"} to place. Parked until after the presentation — the board is the proven path through the stack, and this view will follow it.`}
-      />
+      <section className="office-preview">
+        <div className="office-floorplan" aria-hidden="true">
+          {Array.from({ length: 6 }, (_, i) => <span key={i} className="office-desk"><i /><b /></span>)}
+          <div className="office-floorplan-label">Your team&apos;s space</div>
+        </div>
+        <div className="office-preview-content">
+          <span className="office-coming-soon">Coming soon</span>
+          <h2>A little closer, wherever you work.</h2>
+          <p>The office view is taking shape. For now, find all {members.length} teammate{members.length === 1 ? "" : "s"} and their latest updates on the board.</p>
+          <Link href="/board" className="btn btn-primary">Go to team board <span aria-hidden="true">→</span></Link>
+        </div>
+      </section>
     </>
   );
 }
