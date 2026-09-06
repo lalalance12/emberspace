@@ -72,6 +72,7 @@ export function MeForm({
   const [preview, setPreview] = useState<NoteStatus | null>(current);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   // What the card would look like if posted now. Falls back to the saved status
   // so the panel is never empty while someone is mid-edit.
@@ -94,6 +95,7 @@ export function MeForm({
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSaved(false);
     setPending(true);
 
     const rollbackTo = preview;
@@ -124,6 +126,7 @@ export function MeForm({
         details: details.trim() || null,
       });
       setPreview(saved as unknown as NoteStatus);
+      setSaved(true);
       startTransition(() => router.refresh());
     } catch (err) {
       setPreview(rollbackTo);
@@ -149,20 +152,25 @@ export function MeForm({
   }
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_17rem]">
-      <form onSubmit={onSubmit} className="flex flex-col gap-7">
-        <fieldset className="flex flex-col gap-3">
-          <legend className="annotation mb-3">State</legend>
-          <div className="flex flex-wrap gap-2">
+    <div className="status-workspace">
+      <form onSubmit={onSubmit} onChange={() => setSaved(false)} className="status-editor">
+        <section className="status-section" aria-labelledby="status-update-title">
+          <div className="status-section-heading">
+            <h2 id="status-update-title">Your update</h2>
+            <p>Let your team know what has your attention.</p>
+          </div>
+        <fieldset className="status-state-field">
+          <legend className="annotation">Choose a state</legend>
+          <div className="status-state-grid">
             {STATUS_STATES.map((s) => {
               const look = presentationFor(s);
               return (
                 <button
                   key={s}
                   type="button"
-                  onClick={() => setState(s)}
+                  onClick={() => { setState(s); setSaved(false); }}
                   aria-pressed={s === state}
-                  className="chip"
+                  className="status-state-choice"
                   style={
                     {
                       "--state": look.accent,
@@ -172,12 +180,14 @@ export function MeForm({
                 >
                   <span className="state-dot" aria-hidden="true" />
                   {look.label}
+                  {s === state && <svg className="status-state-check" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m3 8 3 3 7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                 </button>
               );
             })}
           </div>
         </fieldset>
 
+        <div className="status-fields">
         {state === "other" && (
           <Field
             label="What state are you in?"
@@ -194,12 +204,13 @@ export function MeForm({
           </Field>
         )}
 
-        <Field label="What you're on">
+        <Field label="What you're on" hint={<span className="status-field-meta"><span>A short headline for your team.</span><span>{note.length}/140</span></span>}>
           <Input
             value={note}
             onChange={(e) => setNote(e.target.value)}
             maxLength={140}
             placeholder="Fixing the checkout bug"
+            className="status-note-input"
           />
         </Field>
 
@@ -207,8 +218,7 @@ export function MeForm({
           label="Details"
           hint={
             <>
-              Optional. Never shown on the card — it opens when someone clicks
-              it. {details.length}/2000
+              <span className="status-field-meta"><span>Optional. Visible when someone opens your update.</span><span>{details.length}/2000</span></span>
             </>
           }
         >
@@ -217,12 +227,12 @@ export function MeForm({
             onChange={(e) => setDetails(e.target.value)}
             maxLength={2000}
             placeholder={
-              "What's actually going on. Where you're stuck, what you tried, what you need from someone."
+              "Add context, share progress, or explain where you need a hand."
             }
           />
         </Field>
 
-        <Field label="Ticket">
+        <Field label="Ticket" hint="Optional. Add a reference so your team can follow along.">
           <Input
             value={ticketRef}
             onChange={(e) => setTicketRef(e.target.value)}
@@ -231,7 +241,15 @@ export function MeForm({
             className="font-[family-name:var(--font-mono)] text-sm uppercase"
           />
         </Field>
+        </div>
+        </section>
 
+        <section className="status-section" aria-labelledby="status-timing-title">
+          <div className="status-section-heading">
+            <h2 id="status-timing-title">Give it a little time</h2>
+            <p>Set an expected duration and choose what happens next.</p>
+          </div>
+          <div className="status-timing-grid">
         <Field label="Duration" hint="How long you expect to be on this.">
           <select
             value={durationMinutes ?? ""}
@@ -243,28 +261,28 @@ export function MeForm({
             }}
             className="input"
           >
-            <option value="">Not set</option>
-            <option value="1">1 minute (test)</option>
+            <option value="">No timer</option>
+            <option value="1">1 minute</option>
             <option value="15">15 minutes</option>
             <option value="30">30 minutes</option>
             <option value="45">45 minutes</option>
-            <option value="60">60 minutes</option>
+            <option value="60">1 hour</option>
           </select>
         </Field>
 
-        {durationMinutes && (
           <Field
             label="Then switch to"
-            hint="Optional. When the timer runs out, flip me to this automatically."
+            hint={durationMinutes ? "Your next state when the timer ends." : "Choose a duration to enable this."}
           >
             <select
               value={autoSwitchTo ?? ""}
+              disabled={!durationMinutes}
               onChange={(e) =>
                 setAutoSwitchTo((e.target.value || null) as StatusState | null)
               }
               className="input"
             >
-              <option value="">Stay as is</option>
+              <option value="">Keep my current state</option>
               {STATUS_STATES.filter((s) => s !== "other").map((s) => (
                 <option key={s} value={s}>
                   {presentationFor(s).label}
@@ -272,54 +290,57 @@ export function MeForm({
               ))}
             </select>
           </Field>
-        )}
-
-        {quickPicks.length > 0 && (
-          <div className="flex flex-col gap-3">
-            <span className="annotation">Recent</span>
-            <div className="flex flex-wrap gap-2">
-              {quickPicks.map((pick) => (
-                <button
-                  key={pick.id}
-                  type="button"
-                  onClick={() => applyQuickPick(pick)}
-                  className="chip"
-                  style={
-                    { "--state": presentationFor(pick.state).accent } as React.CSSProperties
-                  }
-                >
-                  <span className="state-dot" aria-hidden="true" />
-                  {pick.note ?? presentationFor(pick.state).label}
-                </button>
-              ))}
-            </div>
           </div>
-        )}
+        </section>
 
-        <div>
+        {error && <ErrorNote testId="status-error">{error}</ErrorNote>}
+        <div className="status-save-bar">
+          {saved ? <span role="status" className="status-saved">✓ Your update is on the board</span> : <p>Shared with your team when you post.</p>}
           <Button type="submit" disabled={pending} data-testid="post-update">
             {pending ? "Posting…" : "Post update"}
           </Button>
         </div>
-
-        {error && <ErrorNote testId="status-error">{error}</ErrorNote>}
       </form>
 
-      <aside className="flex flex-col gap-3">
-        <span className="annotation">On the board</span>
+      <aside className="status-preview" aria-label="Update preview and recent updates">
+        <section>
+        <div className="status-preview-header">
+          <h2>On the board</h2>
+          <span className="status-preview-live">Live preview</span>
+        </div>
         {draft ? (
           <StatusNote status={draft} name={displayName} now={serverNow} />
         ) : (
-          <div
-            className="grid min-h-44 place-items-center rounded-[var(--radius-card)] border border-dashed p-4 text-center"
-            style={{ borderColor: "var(--line-strong)" }}
-          >
-            <p className="annotation">Nothing pinned yet</p>
+          <div className="status-preview-empty">
+            <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="5" y="6" width="22" height="22" rx="5" stroke="currentColor" strokeWidth="1.5" /><path d="M11 14h10M11 19h7M16 3v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+            <h3>Your update goes here</h3>
+            <p>Add a headline to see how it will look on your team&apos;s board.</p>
           </div>
         )}
-        <p className="text-sm text-[var(--ink-soft)]">
-          This is the card your team sees. It loses colour as it ages.
+        <p className="status-preview-caption">
+          A fresh update keeps its colour. As time passes, it gently fades so your team knows what&apos;s current.
         </p>
+        </section>
+        {quickPicks.length > 0 && (
+          <section className="status-recent">
+            <h2>Pick up where you left off</h2>
+            <p>Start with one of your recent updates.</p>
+            <div className="status-recent-list">
+              {quickPicks.map((pick) => (
+                <button
+                  key={pick.id}
+                  type="button"
+                  onClick={() => { applyQuickPick(pick); setSaved(false); }}
+                  className="status-recent-pick"
+                  style={{ "--state": presentationFor(pick.state).accent } as React.CSSProperties}
+                >
+                  <span className="state-dot" aria-hidden="true" />
+                  <span>{pick.note ?? presentationFor(pick.state).label}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
       </aside>
     </div>
   );
