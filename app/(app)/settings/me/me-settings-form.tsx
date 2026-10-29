@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ErrorNote, Field, Input, Toggle } from "@/components/ui/field";
 import { messageForError } from "@/lib/rpc";
-import { createClient } from "@/lib/supabase/client";
+import { updateMyProfile } from "@/app/actions";
 
 interface Profile {
   id: string;
@@ -51,15 +51,12 @@ export function MeSettingsForm({ profile }: { profile: Profile }) {
 
     setPending(true);
 
-    const { error: err } = await createClient()
-      .from("profiles")
-      .update({
-        display_name: displayName.trim(),
-        message_link: messageLink.trim() || null,
-        peer_nudges_enabled: peer,
-        system_nudges_enabled: system,
-      })
-      .eq("id", profile.id);
+    const { error: err } = await updateMyProfile({
+      display_name: displayName.trim(),
+      message_link: messageLink.trim() || null,
+      peer_nudges_enabled: peer,
+      system_nudges_enabled: system,
+    });
 
     setPending(false);
     if (err) setError(messageForError(err));

@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Board" };
 
 /**
  * Server shell: fetch the initial data for a fast first paint, then hand off
- * to a client component that subscribes to Realtime and patches it.
+ * to a client component that polls for a fresh snapshot.
  */
 export default async function BoardPage() {
   const viewer = await getViewer();
@@ -21,8 +21,8 @@ export default async function BoardPage() {
   if (!viewer.profile.team_id) redirect("/onboarding");
 
   const [{ members, statuses }, nudges] = await Promise.all([
-    getBoardData(viewer.profile.team_id),
-    getOpenPeerNudges(viewer.profile.team_id),
+    getBoardData(viewer.profile.id, viewer.profile.team_id),
+    getOpenPeerNudges(viewer.profile.id, viewer.profile.team_id),
   ]);
 
   return (

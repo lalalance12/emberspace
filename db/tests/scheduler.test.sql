@@ -1,6 +1,6 @@
 -- Workspace: the staleness scheduler, tested in SQL.
 --
---   pnpm exec supabase test db
+--   pnpm db:test     (needs the pgtap extension, which Neon provides)
 --
 -- The no-double-nudge guard is the part most likely to break, so it is the
 -- centre of this file: seed a member with a 2-hour-old status, run
@@ -22,12 +22,10 @@ insert into public.teams (id, name, stale_after_minutes, renudge_after_minutes, 
 values ('11111111-1111-1111-1111-111111111111', 'Scheduler Test', 120, 120, true);
 
 -- handle_new_user() turns these into profiles.
-insert into auth.users (instance_id, id, aud, role, email, created_at, updated_at, raw_app_meta_data, raw_user_meta_data)
+insert into public.auth_user (id, name, email, "updatedAt")
 values
-  ('00000000-0000-0000-0000-000000000000', '22222222-2222-2222-2222-222222222222',
-   'authenticated', 'authenticated', 'sched-active@example.com', now(), now(), '{}', '{"full_name":"Active"}'),
-  ('00000000-0000-0000-0000-000000000000', '33333333-3333-3333-3333-333333333333',
-   'authenticated', 'authenticated', 'sched-signedoff@example.com', now(), now(), '{}', '{"full_name":"Signed Off"}');
+  ('22222222-2222-2222-2222-222222222222', 'Active', 'sched-active@example.com', now()),
+  ('33333333-3333-3333-3333-333333333333', 'Signed Off', 'sched-signedoff@example.com', now());
 
 select set_config('workspace.privileged_profile_write', 'on', true);
 update public.profiles

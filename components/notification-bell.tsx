@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { markNotificationRead } from "@/lib/rpc";
-import { createClient } from "@/lib/supabase/client";
+import { getNotifications } from "@/app/live-actions";
+import { createClient } from "@/lib/data-client";
+import { usePoll } from "@/lib/use-poll";
 
 interface Notification {
   id: string;
@@ -21,8 +23,8 @@ interface Notification {
  * The notification feed is a bell popover in the top bar, not a route. It's a
  * glance, same as everything else here.
  *
- * Rows arrive by trigger and stream in over Realtime. This component never
- * creates one — there is no insert policy on the table, by design.
+ * Rows are written by triggers and picked up on a short poll. This component
+ * never creates one — there is no insert policy on the table, by design.
  *
  * It reports and does not act. Nothing here is answerable: acknowledging a
  * nudge happens on the board, where the nudge actually is. A list that both
@@ -38,41 +40,22 @@ export function NotificationBell({ profileId }: { profileId: string }) {
   // swings for "this just happened" and never for "you were away".
   const [arrivals, setArrivals] = useState(0);
 
+  // Polled rather than streamed. The first poll is the initial load; after
+  // that, any id the bell has not seen before arrived while you were here.
+  const known = useRef<Set<string> | null>(null);
+
   useEffect(() => {
-    const supabase = createClient();
-    let active = true;
-
-    void supabase
-      .from("notifications")
-      .select("id, kind, nudge_id, title, body, href, read_at, created_at")
-      .order("created_at", { ascending: false })
-      .limit(20)
-      .then(({ data }) => {
-        if (active && data) setItems(data);
-      });
-
-    const channel = supabase
-      .channel(`notifications:${profileId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `profile_id=eq.${profileId}`,
-        },
-        (payload) => {
-          setItems((prev) => [payload.new as Notification, ...prev]);
-          setArrivals((n) => n + 1);
-        },
-      )
-      .subscribe();
-
-    return () => {
-      active = false;
-      void supabase.removeChannel(channel);
-    };
+    known.current = null;
   }, [profileId]);
+
+  usePoll(async () => {
+    const rows = await getNotifications().catch(() => null);
+    if (!rows) return;
+    const seen = known.current;
+    if (seen && rows.some((n) => !seen.has(n.id))) setArrivals((n) => n + 1);
+    known.current = new Set(rows.map((n) => n.id));
+    setItems(rows);
+  }, 10_000);
 
   // Escape closes it. A popover you can only dismiss with the mouse is a trap
   // for anyone driving the board from the keyboard.

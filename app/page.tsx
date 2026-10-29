@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/brand-mark";
 import { HeroBoard, LandingExperience, RevealSection, ScrollStory } from "@/components/landing-scenes";
 import { Icon } from "@/components/ui/icon";
-import { createClient } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/queries";
 
 export const metadata: Metadata = {
   title: { absolute: "Workspace — an ambient status board for your team" },
@@ -14,9 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) redirect("/board");
+  if (await getSessionUser()) redirect("/board");
 
   return (
     <LandingExperience>

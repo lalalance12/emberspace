@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ErrorNote, Field, Input, Toggle } from "@/components/ui/field";
 import { RpcError, messageForError, rotateJoinCode } from "@/lib/rpc";
-import { createClient } from "@/lib/supabase/client";
+import { updateTeamPolicy } from "@/app/actions";
+import { createClient } from "@/lib/data-client";
 
 export interface TeamPolicy {
   id: string;
@@ -94,10 +95,7 @@ export function TeamPolicyForm({ team }: { team: TeamPolicy }) {
     }
 
     setPending(true);
-    const { error: err } = await createClient()
-      .from("teams")
-      .update({ name: name.trim(), system_nudges_enabled: system, ...numbers })
-      .eq("id", team.id);
+    const { error: err } = await updateTeamPolicy(team.id, { name: name.trim(), system_nudges_enabled: system, ...numbers });
     setPending(false);
 
     if (err) setError(messageForError(err));

@@ -54,7 +54,8 @@ $$;
 -- ---------------------------------------------------------------------------
 -- enqueue_due_nudges
 -- ---------------------------------------------------------------------------
--- Run every minute by pg_cron. Returns how many nudges it created.
+-- Run by the app at most once a minute (lib/scheduler.ts). Returns how many
+-- nudges it created.
 --
 -- Two independent guards keep this from spamming, and they are the part most
 -- likely to break:
@@ -120,30 +121,11 @@ $$;
 revoke execute on function public.enqueue_due_nudges() from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- Schedule it.
+-- Not scheduled in the database.
 -- ---------------------------------------------------------------------------
--- Non-fatal if pg_cron is unavailable: on a hosted project the extension may
--- need enabling first (Dashboard -> Database -> Extensions -> pg_cron). The
--- rest of the schema must still apply cleanly without it.
-do $$
-begin
-  if exists (select 1 from pg_available_extensions where name = 'pg_cron') then
-    create extension if not exists pg_cron;
-
-    if exists (select 1 from cron.job where jobname = 'enqueue-due-nudges') then
-      perform cron.unschedule('enqueue-due-nudges');
-    end if;
-
-    perform cron.schedule(
-      'enqueue-due-nudges',
-      '* * * * *',
-      $cron$select public.enqueue_due_nudges();$cron$
-    );
-  else
-    raise notice 'pg_cron unavailable; enqueue_due_nudges() is not scheduled. Enable the extension and re-run this migration.';
-  end if;
-exception
-  when insufficient_privilege then
-    raise notice 'pg_cron present but not grantable here; schedule enqueue-due-nudges manually.';
-end;
-$$;
+-- Neon only runs pg_cron while its compute is awake, and the free tier sleeps
+-- when idle, so a per-minute schedule here would either keep the database
+-- awake around the clock or silently stop. Instead the app runs this as the
+-- database owner whenever a board refreshes (lib/scheduler.ts), throttled to
+-- once a minute. Nudges are only created while someone has the app open, which
+-- is when they can be seen anyway.

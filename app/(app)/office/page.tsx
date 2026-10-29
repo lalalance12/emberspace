@@ -18,7 +18,7 @@ export default async function OfficePage() {
   const viewer = await getViewer();
   if (!viewer?.profile.team_id) return null;
 
-  const { members } = await getBoardData(viewer.profile.team_id);
+  const { members } = await getBoardData(viewer.profile.id, viewer.profile.team_id);
 
   return (
     <>

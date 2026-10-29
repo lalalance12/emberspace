@@ -13,34 +13,37 @@ See `README.md` for setup and commands.
 
 ## Non-negotiables
 
-1. **The database schema in `supabase/migrations/` is ground truth.** Never
+1. **The database schema in `db/migrations/` is ground truth.** Never
    invent a table or column. If something you need isn't there, stop and say
    so — don't work around it with client-side state or a new table.
-2. **Use `@supabase/ssr`.** `@supabase/auth-helpers-nextjs` is deprecated. If
-   you find yourself importing `createClientComponentClient` or
-   `createServerComponentClient`, you've used the wrong package.
-3. **`SUPABASE_SERVICE_ROLE_KEY` never appears in client code.** Not in a
-   component, not in a hook, not behind a `typeof window` check. Server-side
-   route handlers only. In practice this project reads it nowhere at all.
-4. **Never bypass RLS.** All app queries go through the anon/publishable key as
-   the signed-in user. If a query returns nothing, the fix is a policy, not the
-   service key.
+2. **The database is Postgres on Neon; auth is Better Auth.** The server talks
+   to it with `pg` through `lib/db.ts`. There is no Supabase anywhere — no
+   `@supabase/*` package, no PostgREST, no Realtime.
+3. **`DATABASE_URL` and `BETTER_AUTH_SECRET` never reach the browser.** Not in
+   a component, not behind `NEXT_PUBLIC_`, not behind a `typeof window` check.
+   Modules that touch them import `server-only`. The browser reaches data only
+   through server actions (`app/actions.ts`, `app/live-actions.ts`).
+4. **Never bypass RLS.** Every user query runs inside `withUser()`
+   (`lib/db.ts`), which steps into the `authenticated` role with the user's id
+   set for `auth.uid()`. If a query returns nothing, the fix is a policy, not a
+   query outside `withUser()`. The only owner-level call is `lib/scheduler.ts`.
 5. **Status writes go through the `set_status` RPC.** Never
    `insert into status_updates` directly from the app — the RPC closes the
    previous row, records the quick pick, and resolves open nudges in one
    transaction.
-6. **Presence is not in Postgres.** Who is online comes from Supabase Realtime
-   Presence. Postgres stores what people are *doing*, Presence tracks whether
-   they're *there*. Never write a heartbeat row.
+6. **Presence is one last-seen row per person.** `public.presence`, written
+   only by `mark_seen()` on each board poll and overwritten in place. It says
+   whether people are *there*; `status_updates` says what they are *doing*.
+   Never log presence history, and never read anything from it but recency.
 7. **The animation package is `motion`, imported from `motion/react`.** Framer
    Motion was renamed; `framer-motion` still installs but is no longer actively
    developed.
 8. **Notifications are written by database triggers only.** There is no insert
    policy on `notifications` and there must never be one. Client code reads them
    and marks them read; it never creates them.
-9. **No email, no SMS, no push provider, no Edge Functions.** Notifications are
-   in-app only. Supabase Realtime plus the `notifications` table *is* the
-   delivery mechanism.
+9. **No email, no SMS, no push provider, no third-party realtime.**
+   Notifications are in-app only. The `notifications` table plus the bell's
+   poll *is* the delivery mechanism.
 
 Rules 5 and 8 are enforced by the database, not by convention: `status_updates`,
 `quick_picks` and `nudges` have **no write policies at all**, and
@@ -58,7 +61,7 @@ not a missing policy — the two are separate layers and you need both.
 
 ## Schema map
 
-Ground truth is `supabase/migrations/`. This is the index, not the definition.
+Ground truth is `db/migrations/`. This is the index, not the definition.
 
 | Table | Purpose |
 |---|---|
@@ -69,6 +72,8 @@ Ground truth is `supabase/migrations/`. This is the index, not the definition.
 | `desks` | the `/office` floor plan grid |
 | `nudges` | peer **and** system, distinguished by `kind` |
 | `notifications` | trigger-written only |
+| `presence` | last seen per person, for "online"; written by `mark_seen()` |
+| `auth_user`, `auth_session`, `auth_account`, `auth_verification` | Better Auth's; no client role can read them |
 
 ### Write API — all `security definer`
 
@@ -83,7 +88,9 @@ Ground truth is `supabase/migrations/`. This is the index, not the definition.
 | `switch_team(code)` | move teams in one transaction; validates the code **before** releasing the old membership |
 | `leave_team()` | leave without arriving anywhere; `team_id` goes null and the app routes to `/onboarding` |
 | `rotate_join_code()` | head only; invalidates the old code |
-| `enqueue_due_nudges()` | pg_cron, every minute; **not** callable by clients |
+| `mark_seen()` | the board poll's "I'm still here" |
+| `enqueue_due_nudges()` | app scheduler, at most once a minute; **not** callable by clients |
+| `expire_due_durations()` | app scheduler, alongside it; **not** callable by clients |
 
 Leaving is never just an `update profiles set team_id`. `release_team_membership()`
 — private, revoked from every client role — closes the open status, settles
@@ -122,7 +129,7 @@ collapse them into one UI.
 
 | | **Peer nudge** | **System nudge** |
 |---|---|---|
-| Sent by | a teammate, manually from the board | `pg_cron`, on staleness |
+| Sent by | a teammate, manually from the board | the scheduler (`lib/scheduler.ts`), on staleness |
 | Reads as | "Lance nudged you — check your messages" | "Still on the checkout bug?" |
 | Asks for | attention. Go look at your DMs. | a status update |
 | Resolves via | `acknowledge_nudge()` | `respond_to_nudge()` or any `set_status()` |
@@ -161,12 +168,16 @@ social; covert nudging turns the feature into a management cudgel.
 ```
 /me form submit
   → optimistic local update (note flips immediately)
-  → supabase.rpc('set_status', {...})
+  → setStatus() → server action callRpc('set_status', {...})
+  → withUser(): set_status() as the signed-in user, under RLS
   → Postgres: close old row, insert new, resolve nudge, save quick pick
-  → Realtime broadcasts INSERT on status_updates
-  → every client patches its store by profile_id
-  → board note animates, office bubble pops
+  → every other board's next poll (≤5s) returns the new row
+  → the board swaps in the snapshot; a changed status id lights the ring
 ```
+
+Polling replaces Realtime. `lib/use-poll.ts` runs only while the tab is
+visible, so a hidden tab never keeps Neon awake. The board polls
+`getBoardSnapshot()` every 5s, the bell `getNotifications()` every 10s.
 
 Errors roll back the optimistic update and surface a toast that says what
 failed and what to do — never a bare "Something went wrong."
@@ -296,10 +307,12 @@ pinned yet. Post the first update."
   used to read a magic link out of Mailpit; that went away with the magic link
   itself, because a sender that rations messages by the hour is a bad thing to
   hang a test suite on.
-- The scheduler is tested in SQL with pgTAP (`supabase/tests/scheduler.test.sql`):
+- The scheduler is tested in SQL with pgTAP (`db/tests/scheduler.test.sql`,
+  run with `pnpm db:test`):
   seed a member with a 2-hour-old status, run `select enqueue_due_nudges()`,
   assert exactly one row lands in `nudges`. Then run it again and assert zero —
   the no-double-nudge guard is the part most likely to break.
 
-Regenerate types after every migration (`pnpm db:types`). A stale
-`database.types.ts` is the most common source of confusing type errors.
+Update `lib/database.types.ts` by hand with every migration — nothing generates
+it from Neon. A stale one is the most common source of confusing type errors.
+Apply migrations with `pnpm db:migrate`.

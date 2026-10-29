@@ -5,7 +5,7 @@ import { TeamPolicyForm, type TeamPolicy } from "./team-policy-form";
 import { PageHeader, Panel } from "@/components/ui/page";
 import { SettingsNav } from "@/components/settings-nav";
 import { getViewer } from "@/lib/queries";
-import { createClient } from "@/lib/supabase/server";
+import { withUser } from "@/lib/db";
 
 /** Static, though the h1 is the team name: titles that move are hard to find. */
 export const metadata: Metadata = { title: "Team settings" };
@@ -27,26 +27,24 @@ export default async function TeamSettingsPage() {
 
   const isHead = viewer.profile.role === "head";
   const teamId = viewer.profile.team_id ?? "";
-  const supabase = await createClient();
-
-  const [{ data: team }, { data: roster }] = await Promise.all([
-    supabase
-      .from("teams")
-      .select(
-        "id, name, join_code, stale_after_minutes, renudge_after_minutes, system_nudges_enabled, peer_nudges_per_hour, peer_nudges_per_recipient_per_hour",
-      )
-      .eq("id", teamId)
-      .maybeSingle<TeamPolicy>(),
-    // Ordered the way release_team_membership() orders it, so the successor
-    // named in the confirmation is the one the database will actually promote.
-    // created_at then id — the same tiebreak, for the same reason.
-    supabase
-      .from("profiles")
-      .select("id, display_name, created_at")
-      .eq("team_id", teamId)
-      .order("created_at")
-      .order("id"),
-  ]);
+  const { team, roster } = await withUser(viewer.profile.id, async (db) => {
+    const [teams, people] = await Promise.all([
+      db.query<TeamPolicy>(
+        `select id, name, join_code, stale_after_minutes, renudge_after_minutes, system_nudges_enabled,
+                peer_nudges_per_hour, peer_nudges_per_recipient_per_hour
+           from public.teams where id = $1`,
+        [teamId],
+      ),
+      // Ordered the way release_team_membership() orders it, so the successor
+      // named in the confirmation is the one the database will actually promote.
+      // created_at then id — the same tiebreak, for the same reason.
+      db.query<{ id: string; display_name: string; created_at: string }>(
+        "select id, display_name, created_at from public.profiles where team_id = $1 order by created_at, id",
+        [teamId],
+      ),
+    ]);
+    return { team: teams.rows[0] ?? null, roster: people.rows };
+  });
 
   if (!team) {
     return (

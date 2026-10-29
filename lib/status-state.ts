@@ -2,7 +2,7 @@
  * Status states and how they read on a card.
  *
  * The enum here must stay in step with public.status_state in
- * supabase/migrations/20260805090000_extensions_and_types.sql. Regenerate
+ * db/migrations/20260805090000_extensions_and_types.sql. Update
  * lib/database.types.ts after any migration.
  *
  * Each state contributes exactly one colour: --state. Everything on the card —

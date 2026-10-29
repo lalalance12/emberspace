@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { RpcError, sendPeerNudge } from "@/lib/rpc";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/data-client";
 
 /**
  * Hard cap, well under the database's 80. A nudge is a signpost, not a

@@ -9,7 +9,8 @@ import { NudgeComposer } from "@/components/nudge-composer";
 import { StatusDetail } from "@/components/status-detail";
 import { StatusNote, type NoteStatus } from "@/components/status-note";
 import { EmptyState } from "@/components/ui/page";
-import { createClient } from "@/lib/supabase/client";
+import { getBoardSnapshot, type BoardSnapshot } from "@/app/live-actions";
+import { usePoll } from "@/lib/use-poll";
 import { STATUS_STATES, presentationFor, type StatusState } from "@/lib/status-state";
 import { decayFor, isSignedOff } from "@/lib/staleness";
 
@@ -34,18 +35,19 @@ interface Props {
 type BoardSort = "name" | "latest" | "attention";
 type Connection = "connecting" | "live" | "reconnecting";
 
+/** How often the board asks for a fresh snapshot while the tab is visible. */
+const POLL_MS = 5_000;
+
 /**
  * The corkboard.
  *
  * Server Components fetched the initial data for a fast first paint; this
- * subscribes to Realtime and patches that data in place. Three channels, three
- * jobs:
+ * polls a snapshot (app/live-actions.ts) and swaps it in. One poll, three
+ * answers:
  *
- *   Postgres Changes on status_updates — what people are DOING
- *   Postgres Changes on nudges         — who is being asked for attention
- *   Presence                           — whether they are THERE
- *
- * Presence is never written to Postgres. There is no heartbeat row.
+ *   status_updates — what people are DOING
+ *   nudges         — who is being asked for attention
+ *   presence       — whether they are THERE (a last-seen time, one row each)
  */
 export function BoardView({
   teamId,
@@ -64,7 +66,7 @@ export function BoardView({
   const [composingFor, setComposingFor] = useState<string | null>(null);
   // Which card's preview is open, held as a profile id rather than a copy of
   // the status. The dialog then reads out of the same `statuses` map the board
-  // does, so a Realtime update while it is open rewrites what you are reading
+  // does, so a polled update while it is open rewrites what you are reading
   // instead of leaving a stale snapshot on screen.
   const [openFor, setOpenFor] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -73,6 +75,10 @@ export function BoardView({
   const [connection, setConnection] = useState<Connection>("connecting");
   const [activity, setActivity] = useState<{ profileId: string; statusId: string } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  // The poll compares against what is on screen, read here rather than inside
+  // a state updater so the comparison runs once per poll.
+  const statusesRef = useRef(statuses);
+  statusesRef.current = statuses;
   const initialIds = useRef(new Set(initialStatuses.map((status) => status.id)));
   const boardId = useId();
   const reduceMotion = useReducedMotion();
@@ -102,94 +108,34 @@ export function BoardView({
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    const supabase = createClient();
-    let active = true;
+  // What used to arrive over three Realtime channels — status inserts, nudge
+  // changes, presence — now comes as one snapshot every few seconds. The
+  // snapshot is the truth: statuses and nudges are replaced wholesale, and a
+  // status whose id changed since the last poll is a fresh post, which is what
+  // lights the change ring.
+  usePoll(async () => {
+    let snapshot: BoardSnapshot | null;
+    try {
+      snapshot = await getBoardSnapshot(teamId);
+    } catch {
+      setConnection("reconnecting");
+      return;
+    }
+    if (!snapshot) {
+      setConnection("reconnecting");
+      return;
+    }
 
-    const changes = supabase
-      .channel(`board-statuses:${teamId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "status_updates",
-          filter: `team_id=eq.${teamId}`,
-        },
-        (payload) => {
-          if (!active) return;
-          const next = payload.new as NoteStatus;
-          setStatuses((prev) => ({ ...prev, [next.profile_id]: next }));
-          setActivity({ profileId: next.profile_id, statusId: next.id });
-        },
-      )
-      .subscribe((status) => {
-        if (active) setConnection(status === "SUBSCRIBED" ? "live" : "reconnecting");
-      });
-
-    return () => {
-      active = false;
-      void supabase.removeChannel(changes);
-    };
-  }, [teamId]);
-
-  // Peer nudges are readable team-wide, so everyone's board reacts: the marker
-  // appears on the recipient's card for the whole team, and the banner appears
-  // for the recipient. Both from the same stream.
-  useEffect(() => {
-    const supabase = createClient();
-
-    const channel = supabase
-      .channel(`board-nudges:${teamId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "nudges",
-          filter: `team_id=eq.${teamId}`,
-        },
-        (payload) => {
-          const row = payload.new as PeerNudge & {
-            kind?: string;
-            state?: string;
-          };
-          if (row?.kind && row.kind !== "peer") return;
-
-          setNudges((prev) => {
-            const without = prev.filter((n) => n.id !== row.id);
-            return row.state === "open" ? [row, ...without] : without;
-          });
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [teamId]);
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    const presence = supabase.channel(`team-presence:${teamId}`, {
-      config: { presence: { key: viewerId } },
-    });
-
-    presence
-      .on("presence", { event: "sync" }, () => {
-        setOnline(new Set(Object.keys(presence.presenceState())));
-      })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          void presence.track({ at: new Date().toISOString() });
-        }
-      });
-
-    return () => {
-      void supabase.removeChannel(presence);
-    };
-  }, [teamId, viewerId]);
+    setConnection("live");
+    const prev = statusesRef.current;
+    const fresh = snapshot.statuses
+      .filter((s) => prev[s.profile_id] && prev[s.profile_id].id !== s.id)
+      .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())[0];
+    if (fresh) setActivity({ profileId: fresh.profile_id, statusId: fresh.id });
+    setStatuses(Object.fromEntries(snapshot.statuses.map((s) => [s.profile_id, s as NoteStatus])));
+    setNudges(snapshot.nudges);
+    setOnline(new Set(snapshot.online));
+  }, POLL_MS);
 
   // The board shows the latest open nudge against you and nothing else. Peer
   // nudges stack by design, but a stack of banners turns the board into an

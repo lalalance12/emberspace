@@ -3,11 +3,12 @@ import { redirect } from "next/navigation";
 
 import { OnboardingChoice } from "./onboarding-choice";
 import { Wordmark } from "@/components/brand-mark";
-import { getViewer } from "@/lib/queries";
+import { getSessionUser, getViewer } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Join a team" };
 
 export default async function OnboardingPage() {
+  if (!(await getSessionUser())) redirect("/login");
   const viewer = await getViewer();
 
   if (!viewer) {

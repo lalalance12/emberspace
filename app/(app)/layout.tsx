@@ -1,18 +1,22 @@
 import { redirect } from "next/navigation";
 
 import { TopBar } from "@/components/top-bar";
-import { getViewer } from "@/lib/queries";
+import { getSessionUser, getViewer } from "@/lib/queries";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Middleware only saw that a cookie exists. An expired or forged one ends
+  // here, and /login is safe to send it to: that page validates the session
+  // too, so there is no loop.
+  if (!(await getSessionUser())) redirect("/login");
+
   const viewer = await getViewer();
 
-  // Deliberately not a redirect to /login. Middleware has already established
-  // there is a session, and middleware sends signed-in users at /login back
-  // here — so redirecting on a missing profile row would just ping-pong.
+  // A valid session with no profile row is a schema problem, not a sign-in
+  // problem, so say so instead of redirecting.
   if (!viewer) {
     return (
       <div className="canvas-ambient grid min-h-dvh place-items-center px-6">

@@ -4,18 +4,19 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ErrorNote, Field, Input } from "@/components/ui/field";
-import { createClient } from "@/lib/supabase/client";
+import { readableAuthError } from "@/lib/auth-errors";
+import { authClient } from "@/lib/auth-client";
 
 /**
- * Set or change the account password.
+ * Change the account password.
  *
- * This is what makes the password option on /login reachable for everyone:
- * anyone who signed up with an email link has no password at all, and without
- * this there is no way to acquire one. It is a separate form from the nudge
- * preferences because forms cannot nest, and because a failed password change
- * should not look like a failed preference save.
+ * Asks for the current one first. A signed-in browser left open on someone's
+ * desk should not be enough to take the account over. It is a separate form
+ * from the nudge preferences because forms cannot nest, and because a failed
+ * password change should not look like a failed preference save.
  */
 export function PasswordSettingsForm() {
+  const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [saved, setSaved] = useState(false);
@@ -33,18 +34,20 @@ export function PasswordSettingsForm() {
     }
 
     setPending(true);
-    const { error: err } = await createClient().auth.updateUser({ password });
+    const { error: err } = await authClient.changePassword({
+      currentPassword: current,
+      newPassword: password,
+      // Other devices keep their sessions; this is a change, not a lockout.
+      revokeOtherSessions: false,
+    });
     setPending(false);
 
     if (err) {
-      setError(
-        /should be at least|weak password/i.test(err.message)
-          ? "That password is too short. Use at least 8 characters."
-          : `Couldn't change your password: ${err.message}`,
-      );
+      setError(readableAuthError(err, "password"));
       return;
     }
 
+    setCurrent("");
     setPassword("");
     setConfirm("");
     setSaved(true);
@@ -61,6 +64,16 @@ export function PasswordSettingsForm() {
         </div>
 
         <div className="settings-fields">
+        <Field label="Current password">
+          <Input
+            type="password"
+            required
+            autoComplete="current-password"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            placeholder="••••••••"
+          />
+        </Field>
         <div className="settings-field-grid">
         <Field label="New password" hint="At least 8 characters.">
           <Input

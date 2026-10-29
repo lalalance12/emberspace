@@ -98,7 +98,7 @@ grant  execute on function public.set_status(public.status_state, text, text, in
 -- ---------------------------------------------------------------------------
 -- expire_due_durations
 -- ---------------------------------------------------------------------------
--- Run every minute by pg_cron. For each open status whose timer has elapsed and
+-- Run by the app at most once a minute. For each open status whose timer has elapsed and
 -- that named a state to switch to, close it and open a fresh status in the
 -- target state. Returns how many it switched.
 --
@@ -158,27 +158,7 @@ $$;
 revoke execute on function public.expire_due_durations() from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- Schedule it. Non-fatal if pg_cron is not enabled — same posture as the
--- staleness scheduler. Enable pg_cron (Dashboard -> Database -> Extensions)
--- and re-run this block to start it.
+-- Not scheduled in the database: runs alongside enqueue_due_nudges() from the
+-- app's board refresh (lib/scheduler.ts). See the note in the scheduler
+-- migration for why.
 -- ---------------------------------------------------------------------------
-do $$
-begin
-  if exists (select 1 from pg_extension where extname = 'pg_cron') then
-    if exists (select 1 from cron.job where jobname = 'expire-due-durations') then
-      perform cron.unschedule('expire-due-durations');
-    end if;
-
-    perform cron.schedule(
-      'expire-due-durations',
-      '* * * * *',
-      $cron$select public.expire_due_durations();$cron$
-    );
-  else
-    raise notice 'pg_cron not enabled; expire_due_durations() is not scheduled. Enable it in the dashboard and re-run this block.';
-  end if;
-exception
-  when insufficient_privilege then
-    raise notice 'pg_cron present but not grantable here; schedule expire-due-durations manually.';
-end;
-$$;

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ErrorNote, Field, Input } from "@/components/ui/field";
 import { RpcError, createTeam, joinTeam } from "@/lib/rpc";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/data-client";
 
 type Pending = "join" | "create" | null;
 

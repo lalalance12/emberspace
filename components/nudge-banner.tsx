@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { Button } from "@/components/ui/button";
 import { RpcError, acknowledgeNudge } from "@/lib/rpc";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/data-client";
 
 export interface PeerNudge {
   id: string;
