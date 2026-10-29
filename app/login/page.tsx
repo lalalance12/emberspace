@@ -20,6 +20,7 @@ export default async function LoginPage({
 
   return (
     <AuthShell
+      variant="signin"
       title={
         <>
           Welcome back.

@@ -11,11 +11,14 @@ import { Icon } from "@/components/ui/icon";
 
 /** The landing page always runs at full motion; there is no preference to set. */
 export function LandingExperience({ children }: { children: ReactNode }) {
-  return <div className="public-site landing-experience"><LandingBackdrop />{children}</div>;
+  return <div className="public-site landing-experience"><WaveBackdrop />{children}</div>;
 }
 
-/** Slow violet waves behind everything, so the page reads as paper under light, not a blank sheet. */
-function LandingBackdrop() {
+/**
+ * Slow violet waves behind everything, so the page reads as paper under light,
+ * not a blank sheet. Sign-in and sign-up sit on the same ground.
+ */
+export function WaveBackdrop() {
   return (
     <div className="landing-backdrop" aria-hidden="true">
       <span className="landing-glow landing-glow-a" />
