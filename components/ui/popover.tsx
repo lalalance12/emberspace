@@ -28,9 +28,9 @@ export function PopoverContent({
         sideOffset={sideOffset}
         className={cn(
           "panel z-50 w-auto p-3 outline-none",
-          // Radix sets data-state and data-side; the entrance matches .rise-in
-          // rather than introducing a second motion vocabulary.
-          "data-[state=open]:animate-[rise-in_180ms_cubic-bezier(0.2,0.8,0.2,1)_both]",
+          // Radix sets data-state and the transform origin; the panel scales
+          // out of its trigger instead of appearing from nowhere.
+          "origin-[var(--radix-popover-content-transform-origin)] data-[state=open]:animate-[popover-in_200ms_var(--ease-out)_both]",
           className,
         )}
         {...props}

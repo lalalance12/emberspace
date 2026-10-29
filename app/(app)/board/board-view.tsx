@@ -284,7 +284,7 @@ export function BoardView({
           <div className="board-activity" role="status" aria-live="polite" aria-atomic="true">
             <AnimatePresence mode="wait" initial={false}>
               <motion.span key={activity?.statusId ?? connection}
-                initial={{ opacity: 0, y: reduceMotion ? 0 : 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduceMotion ? 0 : -5 }}
+                initial={{ opacity: 0, transform: `translateY(${reduceMotion ? 0 : 5}px)` }} animate={{ opacity: 1, transform: "translateY(0px)" }} exit={{ opacity: 0, transform: `translateY(${reduceMotion ? 0 : -5}px)` }}
                 transition={{ duration: reduceMotion ? 0 : .18 }}>
                 {activity ? `${nameFor(activity.profileId)} updated their status` : connection === "reconnecting" ? "Showing the last received updates" : "A shared picture, without refreshing"}
               </motion.span>
@@ -359,7 +359,7 @@ export function BoardView({
                   // CSS handles entrance under the user's motion media query.
                   // Keeping initial markup constant avoids SSR hydration drift.
                   initial={false}
-                  animate={{ opacity: 1, y: 0 }}
+                  animate={{ opacity: 1 }}
                   exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.97 }}
                   onAnimationComplete={() => initialIds.current.delete(status.id)}
                   transition={{
@@ -461,6 +461,6 @@ function FilterHighlight({ reduceMotion }: { reduceMotion: boolean }) {
 function AnimatedCount({ value }: { value: number }) {
   const reduceMotion = useReducedMotion();
   return <span className="board-count"><AnimatePresence mode="popLayout" initial={false}>
-    <motion.span key={value} initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }} transition={{ duration: reduceMotion ? 0 : .2 }}>{value}</motion.span>
+    <motion.span key={value} initial={{ opacity: 0, transform: `translateY(${reduceMotion ? 0 : 8}px)` }} animate={{ opacity: 1, transform: "translateY(0px)" }} exit={{ opacity: 0, transform: `translateY(${reduceMotion ? 0 : -8}px)` }} transition={{ duration: reduceMotion ? 0 : .2 }}>{value}</motion.span>
   </AnimatePresence></span>;
 }

@@ -38,8 +38,8 @@
 .board-filter > span:not(.state-dot) { opacity: .7; font-size: 11px; }
 .board-filter .state-dot { width: 7px; height: 7px; }
 .status-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 22px; }
-.status-card-wrap { position: relative; height: 100%; transition: transform 220ms ease; }
-.status-card-wrap:hover { transform: translateY(-3px); }
+.status-card-wrap { position: relative; height: 100%; transition: transform 200ms ease; }
+@media (hover: hover) and (pointer: fine) { .status-card-wrap:hover { transform: translateY(-3px); } }
 .note.status-card {
   --state: inherit;
   --tint: inherit;
@@ -231,7 +231,7 @@
 .board-page .status-card[data-blocked="true"] .status-card-open-hint { color: white; }
 .board-empty-result { grid-column: 1 / -1; }
 @media (prefers-reduced-motion: no-preference) {
-  .board-card-content { animation: board-card-arrive 420ms cubic-bezier(.2,.8,.2,1) var(--board-enter-delay, 0s) both; }
+  .board-card-content { animation: board-card-arrive 300ms var(--ease-out) var(--board-enter-delay, 0s) both; }
 }
 @keyframes board-card-arrive {
   from { opacity: 0; transform: translateY(18px); }

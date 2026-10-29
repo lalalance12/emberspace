@@ -50,8 +50,9 @@
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: border-color .16s ease, background .16s ease, color .16s ease;
+  transition: border-color .16s ease, background .16s ease, color .16s ease, transform .16s var(--ease-out);
 }
+.status-state-choice:active, .status-recent-pick:active { transform: scale(.97); }
 .status-state-choice:hover { border-color: var(--violet); background: var(--canvas); }
 .status-state-choice[aria-pressed="true"] {
   border-color: var(--violet);

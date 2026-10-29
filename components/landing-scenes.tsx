@@ -28,16 +28,22 @@ function LandingBackdrop() {
   );
 }
 
-/** A section that rises into place each time it scrolls into view. */
+/** The shared --ease-out curve, for Motion values that cannot read a CSS token. */
+const easeOut = [0.23, 1, 0.32, 1] as const;
+
+/**
+ * A section that rises into place the first time it scrolls into view. Once:
+ * re-animating on every scroll-by is an interface fighting its reader.
+ */
 export function RevealSection({ children, className, labelledBy }: { children: ReactNode; className?: string; labelledBy?: string }) {
   return (
     <motion.section
       className={className}
       aria-labelledby={labelledBy}
-      initial={{ opacity: 0, y: 48, scale: 0.97 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
-      viewport={{ once: false, amount: 0.3 }}
-      transition={{ duration: 0.8, ease: [0.2, 0.7, 0.2, 1] }}
+      initial={{ opacity: 0, transform: "translateY(48px) scale(0.97)" }}
+      whileInView={{ opacity: 1, transform: "translateY(0px) scale(1)" }}
+      viewport={{ once: true, margin: "-100px" }}
+      transition={{ duration: 0.8, ease: easeOut }}
     >
       {children}
     </motion.section>
@@ -149,10 +155,10 @@ export function ScrollStory() {
               <motion.div
                 className="landing-chapter-card"
                 data-chapter={index}
-                initial={{ opacity: 0, y: 56, rotate: index % 2 ? 1.5 : -1.5 }}
-                whileInView={{ opacity: 1, y: 0, rotate: 0 }}
-                viewport={{ once: false, amount: 0.4 }}
-                transition={{ duration: 0.75, ease: [0.2, 0.7, 0.2, 1] }}
+                initial={{ opacity: 0, transform: `translateY(56px) rotate(${index % 2 ? 1.5 : -1.5}deg)` }}
+                whileInView={{ opacity: 1, transform: "translateY(0px) rotate(0deg)" }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.75, ease: easeOut }}
               >
                 <span className="landing-chapter-watermark" aria-hidden="true">{item.number}</span>
                 <div className="landing-chapter-copy">

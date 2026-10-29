@@ -34,6 +34,9 @@ interface Notification {
 export function NotificationBell({ profileId }: { profileId: string }) {
   const [items, setItems] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
+  // Counts rows that arrived live, not the ones fetched on load, so the bell
+  // swings for "this just happened" and never for "you were away".
+  const [arrivals, setArrivals] = useState(0);
 
   useEffect(() => {
     const supabase = createClient();
@@ -60,6 +63,7 @@ export function NotificationBell({ profileId }: { profileId: string }) {
         },
         (payload) => {
           setItems((prev) => [payload.new as Notification, ...prev]);
+          setArrivals((n) => n + 1);
         },
       )
       .subscribe();
@@ -124,11 +128,15 @@ export function NotificationBell({ profileId }: { profileId: string }) {
         }
         className="relative grid size-9 cursor-pointer place-items-center rounded-full text-[var(--ink-soft)] transition-colors duration-200 hover:bg-[var(--sunken)] hover:text-[var(--ink)]"
       >
-        <BellGlyph ringing={unread > 0} />
+        {/* Keyed on arrivals so each live row replays the swing from rest. */}
+        <span key={arrivals} className={arrivals > 0 ? "bell-swing grid" : "grid"}>
+          <BellGlyph ringing={unread > 0} />
+        </span>
         {unread > 0 && (
           <span
+            key={arrivals}
             aria-hidden="true"
-            className="absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full px-1 text-[10px] leading-4 font-semibold text-white"
+            className={`absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full px-1 text-[10px] leading-4 font-semibold text-white${arrivals > 0 ? " bell-badge-pop" : ""}`}
             style={{ backgroundImage: "var(--gradient-brand)" }}
           >
             {unread > 9 ? "9+" : unread}

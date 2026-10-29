@@ -266,6 +266,10 @@ blocked breathe). No glassmorphism beyond the top bar's blur. Respect
 staleness stays legible with every animation removed. The signed-out landing
 page (`/`) is the one deliberate exception: it always plays at full motion,
 with no preference control, behind slow violet waves (`.landing-backdrop`).
+Curves come from three tokens in `:root` — `--ease-out` for anything entering
+or answering a press, `--ease-in-out` for movement on screen, `--ease-drawer`
+— never a hand-rolled `cubic-bezier`. Buttons press to `scale(0.97)`, and hover
+motion sits inside `@media (hover: hover) and (pointer: fine)`.
 Keyboard focus is always
 visible and uses the brand colour.
 
