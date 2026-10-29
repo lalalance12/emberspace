@@ -647,9 +647,9 @@ dialog.dialog[open] {
    in the DOM, so staleness stays legible with every animation removed.
 --------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
-  html:not(:has(.landing-experience[data-motion="full"])) *,
-  html:not(:has(.landing-experience[data-motion="full"])) *::before,
-  html:not(:has(.landing-experience[data-motion="full"])) *::after {
+  html:not(:has(.landing-experience)) *,
+  html:not(:has(.landing-experience)) *::before,
+  html:not(:has(.landing-experience)) *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

@@ -263,7 +263,10 @@ places — the wordmark, the primary button, and the active nav underline. One
 entrance animation (`.rise-in`), one hover (a 3px lift on cards), one loop (the
 blocked breathe). No glassmorphism beyond the top bar's blur. Respect
 `prefers-reduced-motion` — the mono age label is always in the DOM, so
-staleness stays legible with every animation removed. Keyboard focus is always
+staleness stays legible with every animation removed. The signed-out landing
+page (`/`) is the one deliberate exception: it always plays at full motion,
+with no preference control, behind slow violet waves (`.landing-backdrop`).
+Keyboard focus is always
 visible and uses the brand colour.
 
 Controls live as classes in `globals.css` (`.btn`, `.input`, `.chip`,
