@@ -1,4 +1,4 @@
--- Workspace: local development seed.
+-- Emberspace: development seed.
 --
 -- Run with `pnpm db:seed` after `pnpm db:migrate`. Development data only.
 --
@@ -9,13 +9,16 @@
 
 set search_path = public, extensions;
 
--- Five people at deliberately different ages so every rung of the decay
--- ladder is visible the first time you open /board:
---   Lance   20 min   full saturation, crisp shadow, flat
---   Dana     2 h     shadow softens, ~15% desaturated
---   Kit      4 h     ~35% desaturated, corner curls, slight tilt
---   Rey      7 h     near-greyscale, pronounced curl, "STALE · 7H"
---   Ola    blocked   exempt from decay: signal pushpin, slow pulse
+-- Five people at deliberately different ages so every band of the ember
+-- bed is filled the first time you open /board:
+--   Lance   20 min   Glowing: yellow core into full violet
+--   Dana     2 h     Warm: a trace of yellow left
+--   Kit      4 h     Warm: violet only, mostly drained
+--   Rey      7 h     Ash: near-white, "STALE · 7H"
+--   Ola    blocked   Burning: exempt from decay, breathes until resolved
+--
+-- Plus Test, a member with no status yet: the account to sign in as and try
+-- the product from a first update onwards.
 do $$
 declare
   v_team   uuid := gen_random_uuid();
@@ -24,6 +27,7 @@ declare
   v_kit    uuid := gen_random_uuid();
   v_rey    uuid := gen_random_uuid();
   v_ola    uuid := gen_random_uuid();
+  v_test   uuid := gen_random_uuid();
 
   v_person record;
   -- Hashed by scripts/seed.mjs with Better Auth's own hasher, so these
@@ -39,7 +43,8 @@ begin
       (v_dana,  'dana@example.com',  'Dana'),
       (v_kit,   'kit@example.com',   'Kit'),
       (v_rey,   'rey@example.com',   'Rey'),
-      (v_ola,   'ola@example.com',   'Ola')
+      (v_ola,   'ola@example.com',   'Ola'),
+      (v_test,  'test@example.com',  'Test')
     ) as t(id, email, name)
   loop
     -- Better Auth's account shape: a user, plus a "credential" account that
@@ -56,7 +61,7 @@ begin
   update public.profiles
      set team_id      = v_team,
          message_link = 'https://slack.com/app_redirect?channel=' || lower(display_name)
-   where id in (v_lance, v_dana, v_kit, v_rey, v_ola);
+   where id in (v_lance, v_dana, v_kit, v_rey, v_ola, v_test);
 
   update public.profiles set role = 'head' where id = v_lance;
   perform set_config('workspace.privileged_profile_write', 'off', true);

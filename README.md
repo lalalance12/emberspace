@@ -61,7 +61,7 @@ every client role because they act on the whole database.
 pnpm install
 vercel env pull .env.local      # DATABASE_URL + BETTER_AUTH_SECRET
 pnpm db:migrate                 # apply db/migrations
-pnpm db:seed                    # optional: a team of five at every decay tier
+pnpm db:seed                    # optional: a team at every decay tier, plus a test account
 pnpm dev
 ```
 
@@ -72,8 +72,10 @@ Branches) so experiments never touch production data, and point `.env.local`'s
 
 The seed creates a **Product** team with five people deliberately spread across
 the staleness ladder, so every decay tier is visible the first time you open
-`/board`. All of them sign in at `/login` with the password `password123`
-(`dana@example.com`, `lance@example.com`, …).
+`/board`, plus `test@example.com` — a member with no status yet, the account
+to try things as. All of them sign in at `/login` with the password
+`password123` (`test@example.com`, `dana@example.com`, `lance@example.com` is
+the team head, …).
 
 ### Getting onto a team
 

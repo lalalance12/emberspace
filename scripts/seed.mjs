@@ -4,7 +4,7 @@ import pg from "pg";
 
 /**
  * Load db/seed.sql: five teammates on one team at every rung of the decay
- * ladder, all with the password "password123".
+ * ladder plus a fresh test account, all with the password "password123".
  *
  * The password is hashed here with Better Auth's own hasher and handed to the
  * SQL as a setting, so the seeded accounts sign in through the real form —
@@ -17,7 +17,7 @@ try {
   await client.query("select set_config('workspace.seed_password_hash', $1, true)", [await hashPassword("password123")]);
   await client.query(readFileSync("db/seed.sql", "utf8"));
   await client.query("commit");
-  console.log("Seeded. Sign in as dana@example.com / password123.");
+  console.log("Seeded. Sign in as test@example.com / password123.");
 } catch (error) {
   await client.query("rollback");
   console.error(error.message);
