@@ -1,10 +1,10 @@
-# Workspace
+# Emberspace
 
 Ambient status board that replaces the daily standup. Everyone posts what
 they're working on; two shared views show the whole team at a glance.
 
-Workspace is an **attention layer, not a chat app.** It never carries
-conversation. When someone needs a teammate, Workspace produces a nudge that
+Emberspace is an **attention layer, not a chat app.** It never carries
+conversation. When someone needs a teammate, Emberspace produces a nudge that
 sends them to Slack, Discord, or wherever the team actually talks. Resist every
 temptation to add messaging — the moment it has a DM inbox it stops being
 glanceable and starts competing with tools that do it better.
@@ -13,34 +13,37 @@ See `README.md` for setup and commands.
 
 ## Non-negotiables
 
-1. **The database schema in `supabase/migrations/` is ground truth.** Never
+1. **The database schema in `db/migrations/` is ground truth.** Never
    invent a table or column. If something you need isn't there, stop and say
    so — don't work around it with client-side state or a new table.
-2. **Use `@supabase/ssr`.** `@supabase/auth-helpers-nextjs` is deprecated. If
-   you find yourself importing `createClientComponentClient` or
-   `createServerComponentClient`, you've used the wrong package.
-3. **`SUPABASE_SERVICE_ROLE_KEY` never appears in client code.** Not in a
-   component, not in a hook, not behind a `typeof window` check. Server-side
-   route handlers only. In practice this project reads it nowhere at all.
-4. **Never bypass RLS.** All app queries go through the anon/publishable key as
-   the signed-in user. If a query returns nothing, the fix is a policy, not the
-   service key.
+2. **The database is Postgres on Neon; auth is Better Auth.** The server talks
+   to it with `pg` through `lib/db.ts`. There is no Supabase anywhere — no
+   `@supabase/*` package, no PostgREST, no Realtime.
+3. **`DATABASE_URL` and `BETTER_AUTH_SECRET` never reach the browser.** Not in
+   a component, not behind `NEXT_PUBLIC_`, not behind a `typeof window` check.
+   Modules that touch them import `server-only`. The browser reaches data only
+   through server actions (`app/actions.ts`, `app/live-actions.ts`).
+4. **Never bypass RLS.** Every user query runs inside `withUser()`
+   (`lib/db.ts`), which steps into the `authenticated` role with the user's id
+   set for `auth.uid()`. If a query returns nothing, the fix is a policy, not a
+   query outside `withUser()`. The only owner-level call is `lib/scheduler.ts`.
 5. **Status writes go through the `set_status` RPC.** Never
    `insert into status_updates` directly from the app — the RPC closes the
    previous row, records the quick pick, and resolves open nudges in one
    transaction.
-6. **Presence is not in Postgres.** Who is online comes from Supabase Realtime
-   Presence. Postgres stores what people are *doing*, Presence tracks whether
-   they're *there*. Never write a heartbeat row.
+6. **Presence is one last-seen row per person.** `public.presence`, written
+   only by `mark_seen()` on each board poll and overwritten in place. It says
+   whether people are *there*; `status_updates` says what they are *doing*.
+   Never log presence history, and never read anything from it but recency.
 7. **The animation package is `motion`, imported from `motion/react`.** Framer
    Motion was renamed; `framer-motion` still installs but is no longer actively
    developed.
 8. **Notifications are written by database triggers only.** There is no insert
    policy on `notifications` and there must never be one. Client code reads them
    and marks them read; it never creates them.
-9. **No email, no SMS, no push provider, no Edge Functions.** Notifications are
-   in-app only. Supabase Realtime plus the `notifications` table *is* the
-   delivery mechanism.
+9. **No email, no SMS, no push provider, no third-party realtime.**
+   Notifications are in-app only. The `notifications` table plus the bell's
+   poll *is* the delivery mechanism.
 
 Rules 5 and 8 are enforced by the database, not by convention: `status_updates`,
 `quick_picks` and `nudges` have **no write policies at all**, and
@@ -58,7 +61,7 @@ not a missing policy — the two are separate layers and you need both.
 
 ## Schema map
 
-Ground truth is `supabase/migrations/`. This is the index, not the definition.
+Ground truth is `db/migrations/`. This is the index, not the definition.
 
 | Table | Purpose |
 |---|---|
@@ -69,6 +72,8 @@ Ground truth is `supabase/migrations/`. This is the index, not the definition.
 | `desks` | the `/office` floor plan grid |
 | `nudges` | peer **and** system, distinguished by `kind` |
 | `notifications` | trigger-written only |
+| `presence` | last seen per person, for "online"; written by `mark_seen()` |
+| `auth_user`, `auth_session`, `auth_account`, `auth_verification` | Better Auth's; no client role can read them |
 
 ### Write API — all `security definer`
 
@@ -83,7 +88,9 @@ Ground truth is `supabase/migrations/`. This is the index, not the definition.
 | `switch_team(code)` | move teams in one transaction; validates the code **before** releasing the old membership |
 | `leave_team()` | leave without arriving anywhere; `team_id` goes null and the app routes to `/onboarding` |
 | `rotate_join_code()` | head only; invalidates the old code |
-| `enqueue_due_nudges()` | pg_cron, every minute; **not** callable by clients |
+| `mark_seen()` | the board poll's "I'm still here" |
+| `enqueue_due_nudges()` | app scheduler, at most once a minute; **not** callable by clients |
+| `expire_due_durations()` | app scheduler, alongside it; **not** callable by clients |
 
 Leaving is never just an `update profiles set team_id`. `release_team_membership()`
 — private, revoked from every client role — closes the open status, settles
@@ -122,7 +129,7 @@ collapse them into one UI.
 
 | | **Peer nudge** | **System nudge** |
 |---|---|---|
-| Sent by | a teammate, manually from the board | `pg_cron`, on staleness |
+| Sent by | a teammate, manually from the board | the scheduler (`lib/scheduler.ts`), on staleness |
 | Reads as | "Lance nudged you — check your messages" | "Still on the checkout bug?" |
 | Asks for | attention. Go look at your DMs. | a status update |
 | Resolves via | `acknowledge_nudge()` | `respond_to_nudge()` or any `set_status()` |
@@ -161,32 +168,42 @@ social; covert nudging turns the feature into a management cudgel.
 ```
 /me form submit
   → optimistic local update (note flips immediately)
-  → supabase.rpc('set_status', {...})
+  → setStatus() → server action callRpc('set_status', {...})
+  → withUser(): set_status() as the signed-in user, under RLS
   → Postgres: close old row, insert new, resolve nudge, save quick pick
-  → Realtime broadcasts INSERT on status_updates
-  → every client patches its store by profile_id
-  → board note animates, office bubble pops
+  → every other board's next poll (≤5s) returns the new row
+  → the board swaps in the snapshot; a changed status id lights the ring
 ```
+
+Polling replaces Realtime. `lib/use-poll.ts` runs only while the tab is
+visible, so a hidden tab never keeps Neon awake. The board polls
+`getBoardSnapshot()` every 5s, the bell `getNotifications()` every 10s.
 
 Errors roll back the optimistic update and surface a toast that says what
 failed and what to do — never a bare "Something went wrong."
 
 ## Design direction
 
-**Lit and unlit.** The product is about attention over time: a status is worth
-something when it is fresh and worth less every hour it sits there. So light is
-the design language. A fresh card is lit — its state colour at full strength,
-with a matching glow underneath. As it ages the colour drains out until the card
-is near-white and the mono age label is all that is left.
+**Every status is an ember.** The product is about attention over time: a
+status is worth something when it is fresh and worth less every hour it sits
+there. So heat is the design language. A fresh card glows — a yellow core at
+the bottom-left rising into violet, with a warm glow underneath. As it ages the
+yellow goes first, then the violet drains, until the card is near-white ash and
+the mono age label is all that is left. The name says it: "ember" lit, "space"
+faded, in the wordmark itself.
 
 Decay is **chromatic, not geometric.** An earlier version cut the corner and
 tilted the card; both read as a rendering fault rather than as ageing. The card
 keeps its shape and loses its colour instead.
 
-The gradient is therefore never decoration. `--tint` is set by the decay tier
-and every colour on a card is mixed against it with `color-mix()`, which makes
-the palette itself the staleness signal. If you add a gradient that does not
-encode something true, take it out.
+The gradient is therefore never decoration. The decay tier sets two values:
+`--heat` (the yellow core: 1 → 0.35 → 0 → 0) and `--tint` (the violet: 1 → 0.72
+→ 0.42 → 0.14). Every colour on a card is mixed against them with
+`color-mix()`, which makes the palette itself the staleness signal. If you add a
+gradient that does not encode something true, take it out. The board's ground
+runs from warm at the top to ash at the bottom for the same reason: higher on
+the board is hotter. The violet bar along a card's bottom edge (`.note-heat`)
+shortens with `--tint` and is violet only — the yellow belongs to the card.
 
 Ground is an **off-white with a violet cast**, never pure white — a screen
 people keep open all day should feel like paper under a warm lamp, not a
@@ -196,12 +213,20 @@ Tokens live in `app/globals.css` as Tailwind v4 `@theme` values, aliased in
 `:root` to short names (`--canvas`, `--ink`, `--violet`, `--signal`, …) so both
 spellings work.
 
-State colours are one token each — `--color-state-working` (violet),
-`reviewing` (blue), `blocked` (signal red), `meeting` (amber), `break` (mint),
-`off` (quiet violet-grey) — matched in lightness and chroma so the board reads
-as one system. A state contributes exactly one colour, `--state`; the tint, the
-left edge, the dot and the glow are all mixed from it. Mapped in
-`lib/status-state.ts`.
+**Colour means attention, not activity — three heats, not seven colours.**
+`heatFor()` in `lib/status-state.ts` maps every state to one of them:
+
+| Heat | States | Colour |
+|---|---|---|
+| glowing | working, reviewing, in a meeting, other | violet, with the ember core while fresh |
+| burning | blocked | signal red, with a yellow flame tip; never cools |
+| resting | on a break, done for the day, off | quiet grey; away, not stale, never glows |
+
+The `--color-state-*` tokens still exist one per state, but resolve to those
+three colours, so a state contributes one colour (`--state`) and the card mixes
+everything else from it. What someone is *doing* is the label and its icon
+(`components/state-icon.tsx`) — never a hue. Ember tokens: `--ember-core`,
+`--ember-amber`, `--ember-blush`, `--ember-spark`, only ever mixed in by `--heat`.
 
 ### Type
 
@@ -219,10 +244,10 @@ age label, and the tests.
 
 | Age | `--tint` | Treatment |
 |---|---|---|
-| < 1h | 1.0 | state colour at full strength, coloured glow |
-| 1–3h | 0.72 | colour and glow begin to go |
-| 3–6h | 0.42 | mostly drained |
-| > 6h | 0.14 | near-white, reads `STALE · 7H` |
+| < 1h | 1.0 | yellow core into full violet, warm glow (`--heat` 1) |
+| 1–3h | 0.72 | a trace of yellow left, violet starting to go (`--heat` 0.35) |
+| 3–6h | 0.42 | violet only, mostly drained (`--heat` 0) |
+| > 6h | 0.14 | near-white ash, reads `STALE · 7H` |
 
 Blocked cards are exempt from decay — they hold full chroma, invert to white
 ink, and breathe on a slow loop until resolved. A blocker should never fade
@@ -232,6 +257,18 @@ The **avatar is always violet**, never the state colour: the circle answers
 *who* and the card answers *what is happening*, one signal each. It overhangs
 the card's top-left corner as a sibling of `.note`, with the wrapper carrying
 `data-decay` so both inherit `--tint` from one place.
+
+### The board is an ember bed
+
+Where an update sits is how hot it is. `/board` groups every card into four
+bands, top to bottom: **Burning** (blockers, full-width), **Glowing** (under an
+hour, full cards), **Warm** (1–6 hours, slim rows) and **Ash** (gone cold, or
+resting, as one-line chips). The chosen sort orders cards *within* a band;
+blockers are always first. It is one grid, not four containers, so a card that
+cools into the next band slides there and keeps keyboard focus. `StatusNote`
+takes a `variant` (`card` / `row` / `chip`) for the three sizes — same markup,
+different CSS. The overview above it is the hearth: deep violet, one ember per
+teammate.
 
 ### The card is a headline
 
@@ -263,7 +300,14 @@ places — the wordmark, the primary button, and the active nav underline. One
 entrance animation (`.rise-in`), one hover (a 3px lift on cards), one loop (the
 blocked breathe). No glassmorphism beyond the top bar's blur. Respect
 `prefers-reduced-motion` — the mono age label is always in the DOM, so
-staleness stays legible with every animation removed. Keyboard focus is always
+staleness stays legible with every animation removed. The signed-out landing
+page (`/`) is the one deliberate exception: it always plays at full motion,
+with no preference control, behind slow violet waves (`.landing-backdrop`).
+Curves come from three tokens in `:root` — `--ease-out` for anything entering
+or answering a press, `--ease-in-out` for movement on screen, `--ease-drawer`
+— never a hand-rolled `cubic-bezier`. Buttons press to `scale(0.97)`, and hover
+motion sits inside `@media (hover: hover) and (pointer: fine)`.
+Keyboard focus is always
 visible and uses the brand colour.
 
 Controls live as classes in `globals.css` (`.btn`, `.input`, `.chip`,
@@ -289,10 +333,12 @@ pinned yet. Post the first update."
   used to read a magic link out of Mailpit; that went away with the magic link
   itself, because a sender that rations messages by the hour is a bad thing to
   hang a test suite on.
-- The scheduler is tested in SQL with pgTAP (`supabase/tests/scheduler.test.sql`):
+- The scheduler is tested in SQL with pgTAP (`db/tests/scheduler.test.sql`,
+  run with `pnpm db:test`):
   seed a member with a 2-hour-old status, run `select enqueue_due_nudges()`,
   assert exactly one row lands in `nudges`. Then run it again and assert zero —
   the no-double-nudge guard is the part most likely to break.
 
-Regenerate types after every migration (`pnpm db:types`). A stale
-`database.types.ts` is the most common source of confusing type errors.
+Update `lib/database.types.ts` by hand with every migration — nothing generates
+it from Neon. A stale one is the most common source of confusing type errors.
+Apply migrations with `pnpm db:migrate`.

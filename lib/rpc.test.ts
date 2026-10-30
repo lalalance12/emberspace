@@ -11,7 +11,7 @@ import {
   type Client,
 } from "./rpc";
 
-/** A Supabase client stubbed down to the one method these wrappers use. */
+/** A Client stubbed down to the one method these wrappers use. */
 function clientReturning(result: { data?: unknown; error?: unknown }) {
   const rpc = vi.fn().mockResolvedValue({
     data: result.data ?? null,

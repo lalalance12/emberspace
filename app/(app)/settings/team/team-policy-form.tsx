@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ErrorNote, Field, Input, Toggle } from "@/components/ui/field";
 import { RpcError, messageForError, rotateJoinCode } from "@/lib/rpc";
-import { createClient } from "@/lib/supabase/client";
+import { updateTeamPolicy } from "@/app/actions";
+import { createClient } from "@/lib/data-client";
 
 export interface TeamPolicy {
   id: string;
@@ -94,10 +95,7 @@ export function TeamPolicyForm({ team }: { team: TeamPolicy }) {
     }
 
     setPending(true);
-    const { error: err } = await createClient()
-      .from("teams")
-      .update({ name: name.trim(), system_nudges_enabled: system, ...numbers })
-      .eq("id", team.id);
+    const { error: err } = await updateTeamPolicy(team.id, { name: name.trim(), system_nudges_enabled: system, ...numbers });
     setPending(false);
 
     if (err) setError(messageForError(err));
@@ -139,7 +137,7 @@ export function TeamPolicyForm({ team }: { team: TeamPolicy }) {
       <section className="settings-invite" aria-labelledby="invite-heading">
         <div>
           <h2 id="invite-heading">Make room for your team</h2>
-          <p>Share this join code to bring a teammate into your workspace. Anyone with the code can join.</p>
+          <p>Share this join code to bring a teammate into your Emberspace. Anyone with the code can join.</p>
           <p>Rotating it replaces the code immediately. Current members stay.</p>
         </div>
         <div className="settings-invite-code">

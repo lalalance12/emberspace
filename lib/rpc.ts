@@ -1,5 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
 import type { Database } from "@/lib/database.types";
 import type { StatusState } from "@/lib/status-state";
 
@@ -14,7 +12,42 @@ import type { StatusState } from "@/lib/status-state";
  * to do about it. A toast must never read "Something went wrong".
  */
 
-export type Client = SupabaseClient<Database>;
+type Functions = Database["public"]["Functions"];
+
+/** The write API the browser and the server may call by name. */
+export const CALLABLE_RPCS = [
+  "set_status",
+  "send_peer_nudge",
+  "acknowledge_nudge",
+  "respond_to_nudge",
+  "create_team",
+  "join_team",
+  "switch_team",
+  "leave_team",
+  "rotate_join_code",
+] as const satisfies ReadonlyArray<keyof Functions>;
+
+export type CallableRpc = (typeof CALLABLE_RPCS)[number];
+
+export interface RpcResult<T> {
+  data: T | null;
+  error: PostgrestLike | null;
+}
+
+/**
+ * Anything that can call the write API. Two implementations: the browser's
+ * (lib/data-client.ts, through a server action) and the server's
+ * (lib/rpc-server.ts, inside withUser). Both run the function as the signed-in
+ * user and hand back Postgres's SQLSTATE untouched, so the messages below work
+ * the same from either side.
+ */
+export interface Client {
+  rpc<N extends CallableRpc>(
+    name: N,
+    args?: Functions[N]["Args"] extends never ? undefined : Functions[N]["Args"],
+  ): Promise<RpcResult<Functions[N]["Returns"]>>;
+  markNotificationRead(id: string): Promise<{ error: PostgrestLike | null }>;
+}
 
 /** SQLSTATE -> what the person should read, and what they can do next. */
 export const RPC_MESSAGES: Record<string, string> = {
@@ -46,7 +79,7 @@ export class RpcError extends Error {
   }
 }
 
-interface PostgrestLike {
+export interface PostgrestLike {
   code?: string;
   message?: string;
   details?: string | null;
@@ -197,9 +230,6 @@ export async function rotateJoinCode(client: Client) {
 
 /** Marking read is the only write the client may make to notifications. */
 export async function markNotificationRead(client: Client, id: string) {
-  const { error } = await client
-    .from("notifications")
-    .update({ read_at: new Date().toISOString() })
-    .eq("id", id);
+  const { error } = await client.markNotificationRead(id);
   if (error) throw new RpcError(messageForError(error), error.code);
 }

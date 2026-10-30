@@ -7,10 +7,12 @@ import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/r
 import { NudgeBanner, type PeerNudge } from "@/components/nudge-banner";
 import { NudgeComposer } from "@/components/nudge-composer";
 import { StatusDetail } from "@/components/status-detail";
+import { StateIcon } from "@/components/state-icon";
 import { StatusNote, type NoteStatus } from "@/components/status-note";
 import { EmptyState } from "@/components/ui/page";
-import { createClient } from "@/lib/supabase/client";
-import { STATUS_STATES, presentationFor, type StatusState } from "@/lib/status-state";
+import { getBoardSnapshot, type BoardSnapshot } from "@/app/live-actions";
+import { usePoll } from "@/lib/use-poll";
+import { STATUS_STATES, heatFor, presentationFor, type StatusState } from "@/lib/status-state";
 import { decayFor, isSignedOff } from "@/lib/staleness";
 
 export interface BoardMember {
@@ -34,18 +36,41 @@ interface Props {
 type BoardSort = "name" | "latest" | "attention";
 type Connection = "connecting" | "live" | "reconnecting";
 
+/** How often the board asks for a fresh snapshot while the tab is visible. */
+const POLL_MS = 5_000;
+
+/**
+ * The ember bed. Where an update sits is how hot it is: blockers burn above
+ * everything, fresh posts glow as full cards, they settle into slim rows as
+ * they warm down, and end in the ash as one-line chips. Resting states (break,
+ * done, off) go straight to the ash — they are away, not stale.
+ */
+type Band = "burning" | "glowing" | "warm" | "ash";
+const BANDS: ReadonlyArray<{ id: Band; title: string; hint: string; variant: "card" | "row" | "chip" }> = [
+  { id: "burning", title: "Burning", hint: "Needs a hand", variant: "card" },
+  { id: "glowing", title: "Glowing", hint: "Under an hour", variant: "card" },
+  { id: "warm", title: "Warm", hint: "1 to 6 hours", variant: "row" },
+  { id: "ash", title: "Ash", hint: "Gone cold or resting", variant: "chip" },
+];
+
+function bandFor(status: NoteStatus, now: number): Band {
+  const heat = heatFor(status.state);
+  if (heat === "burning") return "burning";
+  if (heat === "resting") return "ash";
+  const { tier } = decayFor({ startedAt: status.started_at, state: status.state, now });
+  return tier === "fresh" ? "glowing" : tier === "stale" ? "ash" : "warm";
+}
+
 /**
  * The corkboard.
  *
  * Server Components fetched the initial data for a fast first paint; this
- * subscribes to Realtime and patches that data in place. Three channels, three
- * jobs:
+ * polls a snapshot (app/live-actions.ts) and swaps it in. One poll, three
+ * answers:
  *
- *   Postgres Changes on status_updates — what people are DOING
- *   Postgres Changes on nudges         — who is being asked for attention
- *   Presence                           — whether they are THERE
- *
- * Presence is never written to Postgres. There is no heartbeat row.
+ *   status_updates — what people are DOING
+ *   nudges         — who is being asked for attention
+ *   presence       — whether they are THERE (a last-seen time, one row each)
  */
 export function BoardView({
   teamId,
@@ -64,7 +89,7 @@ export function BoardView({
   const [composingFor, setComposingFor] = useState<string | null>(null);
   // Which card's preview is open, held as a profile id rather than a copy of
   // the status. The dialog then reads out of the same `statuses` map the board
-  // does, so a Realtime update while it is open rewrites what you are reading
+  // does, so a polled update while it is open rewrites what you are reading
   // instead of leaving a stale snapshot on screen.
   const [openFor, setOpenFor] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -73,6 +98,10 @@ export function BoardView({
   const [connection, setConnection] = useState<Connection>("connecting");
   const [activity, setActivity] = useState<{ profileId: string; statusId: string } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  // The poll compares against what is on screen, read here rather than inside
+  // a state updater so the comparison runs once per poll.
+  const statusesRef = useRef(statuses);
+  statusesRef.current = statuses;
   const initialIds = useRef(new Set(initialStatuses.map((status) => status.id)));
   const boardId = useId();
   const reduceMotion = useReducedMotion();
@@ -102,94 +131,34 @@ export function BoardView({
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    const supabase = createClient();
-    let active = true;
+  // What used to arrive over three Realtime channels — status inserts, nudge
+  // changes, presence — now comes as one snapshot every few seconds. The
+  // snapshot is the truth: statuses and nudges are replaced wholesale, and a
+  // status whose id changed since the last poll is a fresh post, which is what
+  // lights the change ring.
+  usePoll(async () => {
+    let snapshot: BoardSnapshot | null;
+    try {
+      snapshot = await getBoardSnapshot(teamId);
+    } catch {
+      setConnection("reconnecting");
+      return;
+    }
+    if (!snapshot) {
+      setConnection("reconnecting");
+      return;
+    }
 
-    const changes = supabase
-      .channel(`board-statuses:${teamId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "status_updates",
-          filter: `team_id=eq.${teamId}`,
-        },
-        (payload) => {
-          if (!active) return;
-          const next = payload.new as NoteStatus;
-          setStatuses((prev) => ({ ...prev, [next.profile_id]: next }));
-          setActivity({ profileId: next.profile_id, statusId: next.id });
-        },
-      )
-      .subscribe((status) => {
-        if (active) setConnection(status === "SUBSCRIBED" ? "live" : "reconnecting");
-      });
-
-    return () => {
-      active = false;
-      void supabase.removeChannel(changes);
-    };
-  }, [teamId]);
-
-  // Peer nudges are readable team-wide, so everyone's board reacts: the marker
-  // appears on the recipient's card for the whole team, and the banner appears
-  // for the recipient. Both from the same stream.
-  useEffect(() => {
-    const supabase = createClient();
-
-    const channel = supabase
-      .channel(`board-nudges:${teamId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "nudges",
-          filter: `team_id=eq.${teamId}`,
-        },
-        (payload) => {
-          const row = payload.new as PeerNudge & {
-            kind?: string;
-            state?: string;
-          };
-          if (row?.kind && row.kind !== "peer") return;
-
-          setNudges((prev) => {
-            const without = prev.filter((n) => n.id !== row.id);
-            return row.state === "open" ? [row, ...without] : without;
-          });
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [teamId]);
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    const presence = supabase.channel(`team-presence:${teamId}`, {
-      config: { presence: { key: viewerId } },
-    });
-
-    presence
-      .on("presence", { event: "sync" }, () => {
-        setOnline(new Set(Object.keys(presence.presenceState())));
-      })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          void presence.track({ at: new Date().toISOString() });
-        }
-      });
-
-    return () => {
-      void supabase.removeChannel(presence);
-    };
-  }, [teamId, viewerId]);
+    setConnection("live");
+    const prev = statusesRef.current;
+    const fresh = snapshot.statuses
+      .filter((s) => prev[s.profile_id] && prev[s.profile_id].id !== s.id)
+      .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())[0];
+    if (fresh) setActivity({ profileId: fresh.profile_id, statusId: fresh.id });
+    setStatuses(Object.fromEntries(snapshot.statuses.map((s) => [s.profile_id, s as NoteStatus])));
+    setNudges(snapshot.nudges);
+    setOnline(new Set(snapshot.online));
+  }, POLL_MS);
 
   // The board shows the latest open nudge against you and nothing else. Peer
   // nudges stack by design, but a stack of banners turns the board into an
@@ -232,6 +201,10 @@ export function BoardView({
     }
     return a.member.display_name.localeCompare(b.member.display_name) || a.member.id.localeCompare(b.member.id);
   });
+  // Array.prototype.sort is stable, so the chosen sort survives inside a band.
+  const bandRank = (status: NoteStatus) => BANDS.findIndex((band) => band.id === bandFor(status, now));
+  const bedded = [...visible].sort((a, b) => bandRank(a.status) - bandRank(b.status));
+  const bandCounts = Object.fromEntries(BANDS.map((band) => [band.id, pinned.filter(({ status }) => bandFor(status, now) === band.id).length])) as Record<Band, number>;
   const waiting = members.filter((member) => !statuses[member.id]);
   const blockedCount = pinned.filter(({ status }) => status.state === "blocked").length;
   const staleCount = pinned.filter(({ status }) => !isSignedOff(status.state) &&
@@ -261,13 +234,25 @@ export function BoardView({
       <section className="board-overview board-overview-live" aria-label="Team overview">
         <div className="board-overview-main">
         <div className="board-overview-intro">
-          <span className="board-overview-icon" aria-hidden="true">
-            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>
-          </span>
           <div>
             <h2>The team&apos;s latest</h2>
-            <p>One update per person. A little less standup.</p>
+            <p>{pinned.length === 0 ? "No embers lit yet today." : [
+              bandCounts.glowing && `${bandCounts.glowing} glowing`,
+              bandCounts.burning && `${bandCounts.burning} burning`,
+              bandCounts.warm && `${bandCounts.warm} warm`,
+              bandCounts.ash && `${bandCounts.ash} in the ash`,
+            ].filter(Boolean).join(" · ")}</p>
           </div>
+        </div>
+        {/* One ember per teammate, so the team's heat reads before any card
+            does. Decorative: the facts beside it carry the same numbers. */}
+        <div className="board-coals" aria-hidden="true">
+          {members.map((member) => {
+            const status = statuses[member.id];
+            if (!status) return <i key={member.id} data-unlit="true" />;
+            const decay = decayFor({ startedAt: status.started_at, state: status.state, now });
+            return <i key={member.id} data-heat={heatFor(status.state)} data-decay={decay.tier} />;
+          })}
         </div>
         <dl className="board-overview-facts">
           <div><dt>Teammates</dt><dd><AnimatedCount value={members.length} /></dd></div>
@@ -284,7 +269,7 @@ export function BoardView({
           <div className="board-activity" role="status" aria-live="polite" aria-atomic="true">
             <AnimatePresence mode="wait" initial={false}>
               <motion.span key={activity?.statusId ?? connection}
-                initial={{ opacity: 0, y: reduceMotion ? 0 : 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduceMotion ? 0 : -5 }}
+                initial={{ opacity: 0, transform: `translateY(${reduceMotion ? 0 : 5}px)` }} animate={{ opacity: 1, transform: "translateY(0px)" }} exit={{ opacity: 0, transform: `translateY(${reduceMotion ? 0 : -5}px)` }}
                 transition={{ duration: reduceMotion ? 0 : .18 }}>
                 {activity ? `${nameFor(activity.profileId)} updated their status` : connection === "reconnecting" ? "Showing the last received updates" : "A shared picture, without refreshing"}
               </motion.span>
@@ -317,7 +302,7 @@ export function BoardView({
             {statesPresent.map((state) => (
               <button key={state} type="button" className="board-filter" aria-pressed={stateFilter === state} onClick={() => setStateFilter(stateFilter === state ? null : state)} style={{ "--state": presentationFor(state).accent } as React.CSSProperties}>
                 {stateFilter === state && <FilterHighlight reduceMotion={Boolean(reduceMotion)} />}
-                <span className="state-dot" aria-hidden="true" />{presentationFor(state).label}{" "}
+                <StateIcon state={state} />{presentationFor(state).label}{" "}
                 <span>{pinned.filter(({ status }) => status.state === state).length}</span>
               </button>
             ))}
@@ -337,99 +322,115 @@ export function BoardView({
           }
         />
       ) : (
-        <div className="status-card-grid board-animated-grid" aria-label="Current team updates">
-          <AnimatePresence mode="popLayout">
-            {visible.length === 0 && <motion.div key="empty" className="board-empty-result"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reduceMotion ? 0 : .18 }}>
+        <div className="ember-bed" aria-label="Current team updates">
+          {visible.length === 0 && (
+            <div className="board-empty-result">
               <EmptyState title="No matching updates" hint="Try another name, ticket, or status to find what you're looking for." />
-            </motion.div>}
-            {visible.map(({ member, status }, index) => {
-              const isSelf = member.id === viewerId;
-              const paused =
-                member.nudges_paused_until != null &&
-                new Date(member.nudges_paused_until).getTime() > now;
-              const canNudge =
-                !isSelf && member.peer_nudges_enabled !== false && !paused;
-              const entranceDelay = initialIds.current.has(status.id) && !hasFilters ? Math.min(index * .045, .24) : 0;
+            </div>
+          )}
+          {/* One flat list, ordered by band, with a heading row where each band
+              starts. A card that cools from Glowing to Warm stays the same
+              element in the same parent — it slides to its new place and keeps
+              keyboard focus, instead of being torn down and rebuilt. */}
+          {BANDS.flatMap((band) => {
+            const rows = bedded.filter(({ status }) => bandFor(status, now) === band.id);
+            if (rows.length === 0) return [];
+            return [
+              <motion.div layout={reduceMotion ? false : "position"} key={`band-${band.id}`} className="ember-band-heading" data-band={band.id}>
+                <h3>{band.title}</h3>
+                <span className="annotation">{band.hint}</span>
+                <span className="ember-band-count">{rows.length}</span>
+              </motion.div>,
+              ...rows.map(({ member, status }) => {
+                const isSelf = member.id === viewerId;
+                const paused =
+                  member.nudges_paused_until != null &&
+                  new Date(member.nudges_paused_until).getTime() > now;
+                const canNudge =
+                  !isSelf && member.peer_nudges_enabled !== false && !paused;
+                const index = bedded.findIndex((row) => row.member.id === member.id);
+                const entranceDelay = initialIds.current.has(status.id) && !hasFilters ? Math.min(index * .045, .24) : 0;
 
-              return (
-                <motion.div
-                  key={member.id}
-                  layout={reduceMotion ? false : "position"}
-                  // CSS handles entrance under the user's motion media query.
-                  // Keeping initial markup constant avoids SSR hydration drift.
-                  initial={false}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.97 }}
-                  onAnimationComplete={() => initialIds.current.delete(status.id)}
-                  transition={{
-                    layout: { type: "spring", stiffness: 380, damping: 34 },
-                    opacity: { duration: reduceMotion ? 0 : .2 },
-                    scale: { duration: reduceMotion ? 0 : .16 },
-                  }}
-                  className="board-card-cell group relative"
-                >
-                  <div className="board-card-content" style={{ "--board-enter-delay": `${entranceDelay}s` } as React.CSSProperties}>
-                    {activity?.statusId === status.id && <motion.span key={status.id} className="board-change-ring" aria-hidden="true"
-                      initial={{ opacity: 0 }} animate={{ opacity: reduceMotion ? 1 : [0, 1, 1, 0] }}
-                      transition={{ duration: reduceMotion ? 0 : 2.4, times: [0, .15, .6, 1] }} />}
-                    <StatusNote
-                      status={status}
-                      name={member.display_name}
-                      now={now}
-                      isSelf={isSelf}
-                      online={online.has(member.id)}
-                      onOpen={() => setOpenFor(member.id)}
-                      action={
-                        <span className="relative flex shrink-0 items-center gap-1.5">
-                          {/* Nudged is public on purpose — nudging in the open
-                              keeps it social. */}
-                          {nudgedIds.has(member.id) && (
-                            <span className="tag">Nudged</span>
-                          )}
+                return (
+                  <motion.div
+                    key={member.id}
+                    layout={reduceMotion ? false : "position"}
+                    // CSS handles entrance under the user's motion media query.
+                    // Keeping initial markup constant avoids SSR hydration drift.
+                    initial={false}
+                    animate={{ opacity: 1 }}
+                    onAnimationComplete={() => initialIds.current.delete(status.id)}
+                    transition={{
+                      layout: { type: "spring", duration: 0.6, bounce: 0.15 },
+                      opacity: { duration: reduceMotion ? 0 : .2 },
+                    }}
+                    className="board-card-cell group relative"
+                    data-band={band.id}
+                    data-variant={band.variant}
+                  >
+                    <div className="board-card-content" style={{ "--board-enter-delay": `${entranceDelay}s` } as React.CSSProperties}>
+                      {activity?.statusId === status.id && <motion.span key={status.id} className="board-change-ring" aria-hidden="true"
+                        initial={{ opacity: 0 }} animate={{ opacity: reduceMotion ? 1 : [0, 1, 1, 0] }}
+                        transition={{ duration: reduceMotion ? 0 : 2.4, times: [0, .15, .6, 1] }} />}
+                      <StatusNote
+                        status={status}
+                        name={member.display_name}
+                        now={now}
+                        isSelf={isSelf}
+                        online={online.has(member.id)}
+                        variant={band.variant}
+                        onOpen={() => setOpenFor(member.id)}
+                        action={
+                          <span className="relative flex shrink-0 items-center gap-1.5">
+                            {/* Nudged is public on purpose — nudging in the open
+                                keeps it social. */}
+                            {nudgedIds.has(member.id) && (
+                              <span className="tag">Nudged</span>
+                            )}
 
-                          {canNudge && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setComposingFor((v) =>
-                                  v === member.id ? null : member.id,
-                                )
-                              }
-                              aria-expanded={composingFor === member.id}
-                              aria-label={`Nudge ${member.display_name}`}
-                              className="note-nudge-button"
-                            >
-                              Nudge
-                            </button>
-                          )}
+                            {canNudge && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setComposingFor((v) =>
+                                    v === member.id ? null : member.id,
+                                  )
+                                }
+                                aria-expanded={composingFor === member.id}
+                                aria-label={`Nudge ${member.display_name}`}
+                                className="note-nudge-button"
+                              >
+                                Nudge
+                              </button>
+                            )}
 
-                        </span>
-                      }
-                    />
-                  </div>
+                          </span>
+                        }
+                      />
+                    </div>
 
-                  {/* Sibling of the card, not a child. Inside it, the popover
-                      was bounded by the card and appeared cut off. */}
-                  {composingFor === member.id && (
-                    <NudgeComposer
-                      recipientId={member.id}
-                      recipientName={member.display_name}
-                      onClose={() => setComposingFor(null)}
-                      onSent={() => setComposingFor(null)}
-                    />
-                  )}
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                    {/* Sibling of the card, not a child. Inside it, the popover
+                        was bounded by the card and appeared cut off. */}
+                    {composingFor === member.id && (
+                      <NudgeComposer
+                        recipientId={member.id}
+                        recipientName={member.display_name}
+                        onClose={() => setComposingFor(null)}
+                        onSent={() => setComposingFor(null)}
+                      />
+                    )}
+                  </motion.div>
+                );
+              }),
+            ];
+          })}
         </div>
       )}
 
       {pinned.length > 0 && (
         <div className="board-footnote">
           <span className="freshness-key" aria-hidden="true"><i /><i /><i /><i /></span>
-          <p>Fresh updates hold their color. Older ones fade.{staleCount > 0 ? ` ${staleCount} update${staleCount === 1 ? " is" : "s are"} over 6 hours old.` : ""}</p>
+          <p>Fresh updates glow. Older ones cool to ash.{staleCount > 0 ? ` ${staleCount} update${staleCount === 1 ? " has" : "s have"} gone cold.` : ""}</p>
         </div>
       )}
 
@@ -461,6 +462,6 @@ function FilterHighlight({ reduceMotion }: { reduceMotion: boolean }) {
 function AnimatedCount({ value }: { value: number }) {
   const reduceMotion = useReducedMotion();
   return <span className="board-count"><AnimatePresence mode="popLayout" initial={false}>
-    <motion.span key={value} initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduceMotion ? 0 : -8 }} transition={{ duration: reduceMotion ? 0 : .2 }}>{value}</motion.span>
+    <motion.span key={value} initial={{ opacity: 0, transform: `translateY(${reduceMotion ? 0 : 8}px)` }} animate={{ opacity: 1, transform: "translateY(0px)" }} exit={{ opacity: 0, transform: `translateY(${reduceMotion ? 0 : -8}px)` }} transition={{ duration: reduceMotion ? 0 : .2 }}>{value}</motion.span>
   </AnimatePresence></span>;
 }

@@ -3,11 +3,12 @@ import { redirect } from "next/navigation";
 
 import { OnboardingChoice } from "./onboarding-choice";
 import { Wordmark } from "@/components/brand-mark";
-import { getViewer } from "@/lib/queries";
+import { getSessionUser, getViewer } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Join a team" };
 
 export default async function OnboardingPage() {
+  if (!(await getSessionUser())) redirect("/login");
   const viewer = await getViewer();
 
   if (!viewer) {
@@ -30,7 +31,7 @@ export default async function OnboardingPage() {
         <div className="public-onboarding-intro">
           <p className="public-overline">Make yourself at home</p>
           <h1>Find your team, {viewer.profile.display_name}.</h1>
-          <p>Great work starts with a shared picture. Join your teammates or create a fresh workspace together.</p>
+          <p>Great work starts with a shared picture. Join your teammates or light a fresh Emberspace together.</p>
         </div>
         <OnboardingChoice />
         <p className="public-onboarding-note">You can manage your team in settings whenever you need to.</p>

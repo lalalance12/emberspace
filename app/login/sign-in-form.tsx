@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ErrorNote, Field, Input } from "@/components/ui/field";
 import { readableAuthError } from "@/lib/auth-errors";
-import { createClient } from "@/lib/supabase/client";
+import { authClient } from "@/lib/auth-client";
 
 /**
  * Signing in. Email and password, nothing else.
@@ -18,8 +18,7 @@ import { createClient } from "@/lib/supabase/client";
  * infrastructure at all and cannot be rate limited into uselessness.
  *
  * The consequence to keep in mind: there is no self-serve password recovery.
- * Until custom SMTP is configured, a forgotten password is reset by an admin
- * from the Supabase dashboard.
+ * A forgotten password is reset by whoever runs the database.
  */
 export function SignInForm() {
   const router = useRouter();
@@ -35,13 +34,13 @@ export function SignInForm() {
     setPending(true);
 
     try {
-      const { error } = await createClient().auth.signInWithPassword({
+      const { error } = await authClient.signIn.email({
         email: email.trim(),
         password,
       });
 
       if (error) {
-        setError(readableAuthError(error.message));
+        setError(readableAuthError(error));
         return;
       }
 

@@ -1,21 +1,24 @@
--- Workspace: local development seed.
+-- Emberspace: development seed.
 --
--- Runs after migrations on `supabase db reset`. Local only.
+-- Run with `pnpm db:seed` after `pnpm db:migrate`. Development data only.
 --
 -- This file writes to status_updates directly, which application code must
 -- never do (non-negotiable #5). That is deliberate: seeding has no auth.uid()
 -- to run set_status() as, and it needs to backdate started_at to produce the
 -- staleness ladder. Nothing here is a pattern to copy into the app.
 
-set search_path = public, auth, extensions;
+set search_path = public, extensions;
 
--- Five people at deliberately different ages so every rung of the decay
--- ladder is visible the first time you open /board:
---   Lance   20 min   full saturation, crisp shadow, flat
---   Dana     2 h     shadow softens, ~15% desaturated
---   Kit      4 h     ~35% desaturated, corner curls, slight tilt
---   Rey      7 h     near-greyscale, pronounced curl, "STALE · 7H"
---   Ola    blocked   exempt from decay: signal pushpin, slow pulse
+-- Five people at deliberately different ages so every band of the ember
+-- bed is filled the first time you open /board:
+--   Lance   20 min   Glowing: yellow core into full violet
+--   Dana     2 h     Warm: a trace of yellow left
+--   Kit      4 h     Warm: violet only, mostly drained
+--   Rey      7 h     Ash: near-white, "STALE · 7H"
+--   Ola    blocked   Burning: exempt from decay, breathes until resolved
+--
+-- Plus Test, a member with no status yet: the account to sign in as and try
+-- the product from a first update onwards.
 do $$
 declare
   v_team   uuid := gen_random_uuid();
@@ -24,8 +27,12 @@ declare
   v_kit    uuid := gen_random_uuid();
   v_rey    uuid := gen_random_uuid();
   v_ola    uuid := gen_random_uuid();
+  v_test   uuid := gen_random_uuid();
 
   v_person record;
+  -- Hashed by scripts/seed.mjs with Better Auth's own hasher, so these
+  -- accounts sign in through the real login form.
+  v_password_hash text := current_setting('workspace.seed_password_hash');
 begin
   insert into public.teams (id, name) values (v_team, 'Product');
 
@@ -36,35 +43,17 @@ begin
       (v_dana,  'dana@example.com',  'Dana'),
       (v_kit,   'kit@example.com',   'Kit'),
       (v_rey,   'rey@example.com',   'Rey'),
-      (v_ola,   'ola@example.com',   'Ola')
+      (v_ola,   'ola@example.com',   'Ola'),
+      (v_test,  'test@example.com',  'Test')
     ) as t(id, email, name)
   loop
-    -- The empty-string token columns matter: GoTrue reads them as Go strings
-    -- and errors on NULL, which breaks magic-link sign-in for seeded users.
-    insert into auth.users (
-      instance_id, id, aud, role, email, encrypted_password,
-      email_confirmed_at, created_at, updated_at,
-      raw_app_meta_data, raw_user_meta_data,
-      confirmation_token, recovery_token,
-      email_change_token_new, email_change, email_change_token_current,
-      phone_change, phone_change_token, reauthentication_token
-    ) values (
-      '00000000-0000-0000-0000-000000000000',
-      v_person.id, 'authenticated', 'authenticated', v_person.email,
-      extensions.crypt('password123', extensions.gen_salt('bf')),
-      now(), now(), now(),
-      '{"provider":"email","providers":["email"]}'::jsonb,
-      jsonb_build_object('full_name', v_person.name),
-      '', '', '', '', '', '', '', ''
-    );
+    -- Better Auth's account shape: a user, plus a "credential" account that
+    -- holds the password hash. handle_new_user() makes the profile.
+    insert into public.auth_user (id, name, email, "emailVerified", "updatedAt")
+    values (v_person.id, v_person.name, v_person.email, true, now());
 
-    insert into auth.identities (
-      id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
-    ) values (
-      gen_random_uuid(), v_person.id, v_person.id::text,
-      jsonb_build_object('sub', v_person.id::text, 'email', v_person.email),
-      'email', now(), now(), now()
-    );
+    insert into public.auth_account ("accountId", "providerId", "userId", password, "updatedAt")
+    values (v_person.id::text, 'credential', v_person.id, v_password_hash, now());
   end loop;
 
   -- handle_new_user() created the profile rows; place them on the team.
@@ -72,7 +61,7 @@ begin
   update public.profiles
      set team_id      = v_team,
          message_link = 'https://slack.com/app_redirect?channel=' || lower(display_name)
-   where id in (v_lance, v_dana, v_kit, v_rey, v_ola);
+   where id in (v_lance, v_dana, v_kit, v_rey, v_ola, v_test);
 
   update public.profiles set role = 'head' where id = v_lance;
   perform set_config('workspace.privileged_profile_write', 'off', true);

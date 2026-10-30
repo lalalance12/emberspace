@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { SignupForm } from "./signup-form";
 import { AuthShell } from "@/components/auth-shell";
+import { getSessionUser } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Create account" };
 
-export default function SignupPage() {
+export default async function SignupPage() {
+  // Someone already signed in has no business on the front door.
+  if (await getSessionUser()) redirect("/board");
+
   return (
     <AuthShell
+      variant="signup"
       title={
         <>
           Create your account.

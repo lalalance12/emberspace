@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * The end-to-end flows, against the local stack with supabase/seed.sql applied.
+ * The end-to-end flows, against a database with db/seed.sql applied (pnpm db:seed).
  *
  * These used to sign in by magic link read out of Mailpit. That went away with
  * the magic link itself: Supabase's built-in sender rations emails by the hour
@@ -11,7 +11,7 @@ import { expect, test } from "@playwright/test";
  */
 
 const SEEDED_EMAIL = "dana@example.com";
-const SEEDED_PASSWORD = "password123"; // set by supabase/seed.sql
+const SEEDED_PASSWORD = "password123"; // set by scripts/seed.mjs
 
 test("sign in, post a status, see it on the board", async ({ page }) => {
   await page.goto("/login");
@@ -58,8 +58,8 @@ test("sign in, post a status, see it on the board", async ({ page }) => {
 
 /**
  * The path a new colleague actually walks on demo day: create an account, land
- * on the fork, start a team, arrive at an empty board. Requires "Confirm email"
- * to be off, which supabase/config.toml sets for local.
+ * on the fork, start a team, arrive at an empty board. Signup signs straight in
+ * (autoSignIn in lib/auth.ts), so there is no email step to wait on.
  */
 test("create an account, start a team, land on the board", async ({ page }) => {
   const stamp = Date.now();

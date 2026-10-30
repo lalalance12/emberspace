@@ -38,8 +38,8 @@
 .board-filter > span:not(.state-dot) { opacity: .7; font-size: 11px; }
 .board-filter .state-dot { width: 7px; height: 7px; }
 .status-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 22px; }
-.status-card-wrap { position: relative; height: 100%; transition: transform 220ms ease; }
-.status-card-wrap:hover { transform: translateY(-3px); }
+.status-card-wrap { position: relative; height: 100%; transition: transform 200ms ease; }
+@media (hover: hover) and (pointer: fine) { .status-card-wrap:hover { transform: translateY(-3px); } }
 .note.status-card {
   --state: inherit;
   --tint: inherit;
@@ -50,11 +50,8 @@
   height: 100%;
   padding: 20px 20px 0;
   border-radius: 16px;
-  border-color: color-mix(in oklab, var(--state) calc(var(--tint) * 24%), var(--line));
-  background-image: linear-gradient(145deg, color-mix(in oklab, var(--state) calc(var(--tint) * 11%), var(--surface)), color-mix(in oklab, var(--state) calc(var(--tint) * 3%), var(--surface)));
-  box-shadow: 0 4px 18px -14px color-mix(in oklab, var(--state) calc(var(--tint) * 50%), transparent);
 }
-.note.status-card:hover { transform: none; box-shadow: 0 8px 24px -16px color-mix(in oklab, var(--state) calc(var(--tint) * 60%), transparent); }
+.note.status-card:hover { transform: none; }
 .status-card-person { min-width: 0; display: flex; align-items: center; min-height: 38px; padding-left: 48px; }
 .status-card-identity { min-width: 0; }
 .status-card-identity h3 { display: flex; align-items: center; gap: 7px; overflow: hidden; font-family: var(--font-sans); font-size: 13px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
@@ -64,7 +61,9 @@
 .status-card-presence i[data-online="true"] { background: #46856e; }
 .avatar.status-card-avatar { position: absolute; top: 20px; left: 20px; z-index: 0; width: 36px; height: 36px; background: var(--violet); background-image: none; box-shadow: none; font-size: 14px; pointer-events: none; }
 .status-card-labels { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 23px; }
-.status-card-state { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px; background: color-mix(in oklab, var(--state) calc(var(--tint) * 10%), var(--surface)); }
+/* The activity badge: neutral, with its icon. Colour on the card means heat. */
+.status-card-state { display: inline-flex; align-items: center; gap: 5px; min-width: 0; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; color: var(--ink); background: color-mix(in oklab, var(--surface) 72%, transparent); border: 1px solid color-mix(in oklab, var(--ink) 12%, transparent); }
+.status-card-state svg { flex-shrink: 0; }
 .status-card-state .state-dot { width: 6px; height: 6px; }
 .status-card-duration { white-space: nowrap; color: var(--ink-soft); font-size: 11px; }
 .status-card-headline { min-height: 69px; max-height: 69px; font-size: 19px; line-height: 23px; letter-spacing: -.025em; overflow-wrap: anywhere; }
@@ -81,7 +80,7 @@
 .note-nudge-button:hover { background: var(--surface); }
 .note.status-card[data-blocked="true"] { background-image: none; background-color: var(--color-state-blocked); color: white; }
 .status-card[data-blocked="true"] .status-card-presence, .status-card[data-blocked="true"] .status-card-duration, .status-card[data-blocked="true"] .status-card-meta, .status-card[data-blocked="true"] .status-card-open-hint { color: white; }
-.status-card[data-blocked="true"] .status-card-state { background: rgb(0 0 0 / .08); }
+.status-card[data-blocked="true"] .status-card-state { color: white; background: rgb(255 255 255 / .16); border-color: rgb(255 255 255 / .35); }
 .status-card[data-blocked="true"] .status-card-footer { border-color: rgb(255 255 255 / .2); }
 .status-card[data-blocked="true"] .status-card-presence i { background: rgb(255 255 255 / .45); }
 .status-card[data-blocked="true"] .status-card-presence i[data-online="true"] { background: white; }
@@ -231,7 +230,7 @@
 .board-page .status-card[data-blocked="true"] .status-card-open-hint { color: white; }
 .board-empty-result { grid-column: 1 / -1; }
 @media (prefers-reduced-motion: no-preference) {
-  .board-card-content { animation: board-card-arrive 420ms cubic-bezier(.2,.8,.2,1) var(--board-enter-delay, 0s) both; }
+  .board-card-content { animation: board-card-arrive 300ms var(--ease-out) var(--board-enter-delay, 0s) both; }
 }
 @keyframes board-card-arrive {
   from { opacity: 0; transform: translateY(18px); }
@@ -260,4 +259,129 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .board-page .status-card-open-hint > span { transform: none !important; }
+}
+
+/* ---------------------------------------------------------------------------
+   The ember bed.
+
+   One grid of twelve columns holding every card in band order, with a heading
+   row where each band starts. A glowing card takes a third of a row, a warm
+   one a whole row as a slim line, an ash chip a quarter. Because it is one
+   parent, a card that cools into the next band slides there and keeps focus.
+
+   The ground runs from warm light at the top to ash at the bottom. That
+   gradient is true, not decorative: higher on the board is hotter.
+--------------------------------------------------------------------------- */
+.ember-bed {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background:
+    radial-gradient(60% 160px at 50% 0%, color-mix(in oklab, var(--ember-core) 22%, transparent), transparent 75%),
+    linear-gradient(180deg, color-mix(in oklab, var(--ember-core) 9%, var(--surface)) 0%, color-mix(in oklab, var(--violet) 5%, var(--surface)) 26%, color-mix(in oklab, var(--violet) 3%, var(--surface)) 62%, #f2f1f5 100%);
+}
+.ember-bed > .board-empty-result { grid-column: 1 / -1; }
+.ember-band-heading { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 12px; padding: 10px 2px 0; }
+.ember-band-heading:first-child { padding-top: 0; }
+.ember-band-heading h3 { font-family: var(--font-display); font-size: 17px; font-weight: 600; letter-spacing: -.02em; }
+.ember-band-heading .annotation { font-size: 10px; color: var(--ink-soft); }
+.ember-band-count { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft); }
+.ember-band-heading[data-band="burning"] h3 { color: var(--signal); }
+.ember-band-heading[data-band="glowing"] h3 { color: var(--violet-deep); }
+.ember-band-heading[data-band="ash"] h3 { color: var(--ink-soft); }
+
+.board-card-cell[data-variant="card"] { grid-column: span 4; }
+.board-card-cell[data-band="burning"] { grid-column: 1 / -1; }
+.board-card-cell[data-variant="row"] { grid-column: 1 / -1; }
+.board-card-cell[data-variant="chip"] { grid-column: span 3; }
+
+/* A burning card spans the row: one wide flame per blocker. */
+.board-card-cell[data-band="burning"] .status-card-headline { min-height: 0; max-height: none; font-size: 22px; line-height: 27px; -webkit-line-clamp: 2; }
+
+/* Warm: the same card, laid out as one slim line. */
+.status-card-wrap[data-variant="row"] .note.status-card {
+  display: grid;
+  grid-template-columns: minmax(120px, 170px) auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px 12px 58px;
+  min-height: 0;
+}
+.status-card-wrap[data-variant="row"] .status-card-person { padding-left: 0; min-height: 0; }
+.status-card-wrap[data-variant="row"] .status-card-labels { min-height: 0; }
+.status-card-wrap[data-variant="row"] .status-card-headline { min-height: 0; max-height: 23px; font-size: 16px; -webkit-line-clamp: 1; }
+.status-card-wrap[data-variant="row"] .status-card-footer { display: contents; }
+.status-card-wrap[data-variant="row"] .status-card-open-hint,
+.status-card-wrap[data-variant="row"] .status-card-reference { display: none; }
+.status-card-wrap[data-variant="row"] .avatar.status-card-avatar { top: 50%; left: 16px; width: 30px; height: 30px; font-size: 12px; transform: translateY(-50%); }
+
+/* Ash: a one-line chip. The full update is still one click away. */
+.status-card-wrap[data-variant="chip"] .note.status-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px 9px 44px;
+  border-radius: 999px;
+  min-height: 0;
+  box-shadow: none;
+}
+.status-card-wrap[data-variant="chip"] .status-card-person { flex-shrink: 0; padding-left: 0; min-height: 0; }
+.status-card-wrap[data-variant="chip"] .status-card-presence,
+.status-card-wrap[data-variant="chip"] .status-card-labels,
+.status-card-wrap[data-variant="chip"] .status-card-reference,
+.status-card-wrap[data-variant="chip"] .status-card-open-hint { display: none; }
+.status-card-wrap[data-variant="chip"] .status-card-headline { flex: 1; min-width: 0; min-height: 0; max-height: 18px; font-size: 13px; line-height: 18px; -webkit-line-clamp: 1; color: var(--ink-soft); }
+.status-card-wrap[data-variant="chip"] .status-card-meta { flex-shrink: 0; min-height: 0; }
+.status-card-wrap[data-variant="chip"] .status-card-footer { display: contents; }
+.status-card-wrap[data-variant="chip"] .avatar.status-card-avatar { top: 50%; left: 7px; width: 28px; height: 28px; font-size: 11px; transform: translateY(-50%); box-shadow: 0 0 0 2px var(--surface); }
+
+/* ---------------------------------------------------------------------------
+   The hearth: the overview band, with one ember per teammate.
+--------------------------------------------------------------------------- */
+.board-overview.board-overview-live {
+  border: 0;
+  color: white;
+  background:
+    radial-gradient(60% 160% at 8% 120%, color-mix(in oklab, var(--ember-amber) 38%, transparent), transparent 60%),
+    radial-gradient(50% 140% at 95% -20%, color-mix(in oklab, var(--violet) 70%, transparent), transparent 65%),
+    var(--violet-deep);
+}
+.board-overview-live .board-overview-intro p,
+.board-overview-live .board-overview-facts dt { color: #d6cbef; }
+.board-overview-live .board-overview-facts > div { border-color: #ffffff22; }
+.board-overview-live .board-overview-facts [data-attention="true"] dd { color: #ff9aa9; }
+.board-overview-live .board-live-strip { border-color: #ffffff1f; background: #00000024; color: #d6cbef; }
+.board-coals { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; max-width: 260px; }
+.board-coals i {
+  --tint: 1; --heat: 1;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 70%, color-mix(in oklab, var(--ember-core) calc(var(--heat) * 100%), var(--violet-lift)), color-mix(in oklab, var(--violet-lift) calc(var(--tint) * 100%), #5b4d80) 70%);
+  box-shadow: 0 0 calc(var(--tint) * 14px) color-mix(in oklab, var(--ember-amber) calc(var(--heat) * 80%), color-mix(in oklab, var(--violet-lift) calc(var(--tint) * 70%), transparent));
+}
+.board-coals i[data-heat="burning"] { background: radial-gradient(circle at 60% 40%, var(--ember-core), var(--signal) 65%); box-shadow: 0 0 16px var(--signal); animation: coal-burn 2.6s ease-in-out infinite; }
+.board-coals i[data-heat="resting"] { background: #8a809f; box-shadow: none; }
+.board-coals i[data-unlit="true"] { background: transparent; border: 1.5px dashed #ffffff55; box-shadow: none; }
+@keyframes coal-burn { 50% { box-shadow: 0 0 24px var(--signal); } }
+
+@media (max-width: 1100px) {
+  .board-card-cell[data-variant="card"] { grid-column: span 6; }
+  .board-card-cell[data-variant="chip"] { grid-column: span 4; }
+  .board-coals { display: none; }
+}
+@media (max-width: 720px) {
+  .ember-bed { padding: 14px; gap: 12px; border-radius: 18px; }
+  .board-card-cell[data-variant="card"] { grid-column: 1 / -1; }
+  .board-card-cell[data-variant="chip"] { grid-column: 1 / -1; }
+  .status-card-wrap[data-variant="row"] .note.status-card { grid-template-columns: minmax(0, 1fr) auto; }
+  .status-card-wrap[data-variant="row"] .status-card-labels,
+  .status-card-wrap[data-variant="row"] .status-card-headline { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-coals i[data-heat="burning"] { animation: none; }
 }

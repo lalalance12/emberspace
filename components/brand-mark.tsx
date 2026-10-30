@@ -18,7 +18,7 @@
  * for.
  */
 
-/** Grid, radius, stroke and path all mirror scripts/generate-icons.mjs. */
+/** Grid, radius and every circle mirror scripts/generate-icons.mjs. */
 export function BrandMark({
   size = 20,
   plate = "var(--violet)",
@@ -43,14 +43,14 @@ export function BrandMark({
       focusable="false"
     >
       <rect width="32" height="32" rx="7" fill={plate} />
-      <path
-        d="M7.6 9.8 L11.8 22.2 L16 14 L20.2 22.2 L24.4 9.8"
-        fill="none"
-        stroke="#ffffff"
-        strokeWidth="4.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      {/* The ember: halo, coal, the hot core underneath, and two sparks
+          rising. Flat circles, because a gradient would not survive the 16px
+          tab. */}
+      <circle cx="15" cy="19.4" r="10.2" fill="#b59bff" fillOpacity="0.3" />
+      <circle cx="15" cy="19.4" r="7.4" fill="#ffb35c" />
+      <circle cx="13.4" cy="21.2" r="3.7" fill="#ffe39a" />
+      <circle cx="22.4" cy="10.4" r="2" fill="#ffe39a" />
+      <circle cx="25.6" cy="5.8" r="1.2" fill="#ffe39a" />
     </svg>
   );
 }
@@ -65,8 +65,10 @@ export function Wordmark({ size }: { size?: number }) {
   return (
     <>
       <BrandMark size={size} />
-      <span className="gradient-text font-[family-name:var(--font-display)] text-base font-bold tracking-tight">
-        Workspace
+      {/* One name, two weights of light: "ember" lit in the brand colour,
+          "space" faded — the wordmark does what a status card does. */}
+      <span className="wordmark-text font-[family-name:var(--font-display)] text-base font-bold tracking-tight">
+        <span className="wordmark-ember">ember</span><span className="wordmark-space">space</span>
       </span>
     </>
   );

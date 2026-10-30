@@ -1,4 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Workspace">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Emberspace">
   <rect width="32" height="32" rx="7" fill="#8141e8"/>
-  <path d="M7.6 9.8 L11.8 22.2 L16 14 L20.2 22.2 L24.4 9.8" fill="none" stroke="#ffffff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="15" cy="19.4" r="10.2" fill="#b59bff" fill-opacity="0.3"/>
+  <circle cx="15" cy="19.4" r="7.4" fill="#ffb35c"/>
+  <circle cx="13.4" cy="21.2" r="3.7" fill="#ffe39a"/>
+  <circle cx="22.4" cy="10.4" r="2" fill="#ffe39a"/>
+  <circle cx="25.6" cy="5.8" r="1.2" fill="#ffe39a"/>
 </svg>

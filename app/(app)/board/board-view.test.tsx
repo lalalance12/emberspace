@@ -6,27 +6,40 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BoardView } from "./board-view";
 import type { NoteStatus } from "@/components/status-note";
 
-const realtime = vi.hoisted(() => ({
-  callbacks: new Map<string, (payload: { new: NoteStatus }) => void>(),
-  subscriptions: new Map<string, (status: string) => void>(),
+/**
+ * The board polls a snapshot rather than subscribing to a stream. These mocks
+ * capture its poll callback so a test can deliver "the next refresh" on
+ * demand: post() changes what the server would return and runs one poll.
+ */
+const live = vi.hoisted(() => ({
+  tick: null as null | (() => Promise<void> | void),
+  statuses: new Map<string, NoteStatus>(),
+  failing: false,
 }));
 
-vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({
-    channel: (name: string) => {
-      const channel = {
-        on: (_event: string, _filter: unknown, callback: (payload: { new: NoteStatus }) => void) => {
-          realtime.callbacks.set(name, callback);
-          return channel;
-        },
-        subscribe: (callback?: (status: string) => void) => { if (callback) realtime.subscriptions.set(name, callback); return channel; },
-        presenceState: () => ({}),
-      };
-      return channel;
-    },
-    removeChannel: vi.fn(),
-  }),
+vi.mock("@/lib/use-poll", () => ({
+  usePoll: (tick: () => Promise<void> | void) => { live.tick = tick; },
 }));
+
+vi.mock("@/app/live-actions", () => ({
+  getBoardSnapshot: async () => {
+    if (live.failing) throw new Error("offline");
+    return { statuses: [...live.statuses.values()], nudges: [], online: [] };
+  },
+}));
+
+// The nudge banner and composer reach the server through this; the board's
+// filtering never calls it.
+vi.mock("@/lib/data-client", () => ({ createClient: () => ({}) }));
+
+async function poll() {
+  await act(async () => { await live.tick?.(); });
+}
+
+async function post(next: NoteStatus) {
+  live.statuses.set(next.profile_id, next);
+  await poll();
+}
 
 // Layout animation is independent of the filtering and live-data behavior.
 vi.mock("motion/react", () => ({
@@ -50,13 +63,15 @@ function status(profile_id: string, state: string, note: string, ticket_ref: str
 }
 
 function renderBoard() {
-  return render(<BoardView teamId="team" viewerId="alex" members={members} initialStatuses={[
+  const initial = [
     status("alex", "working", "Building the account screen", "APP-42"),
     status("sam", "blocked", "Waiting for design assets"),
-  ]} initialNudges={[]} serverNow={Date.now()} />);
+  ];
+  live.statuses = new Map(initial.map((s) => [s.profile_id, s]));
+  return render(<BoardView teamId="team" viewerId="alex" members={members} initialStatuses={initial} initialNudges={[]} serverNow={Date.now()} />);
 }
 
-beforeEach(() => { realtime.callbacks.clear(); realtime.subscriptions.clear(); });
+beforeEach(() => { live.tick = null; live.failing = false; });
 afterEach(cleanup);
 
 describe("Board search and status filters", () => {
@@ -89,11 +104,11 @@ describe("Board search and status filters", () => {
     await user.click(screen.getByRole("button", { name: "Blocked 1" }));
     expect(screen.getAllByTestId("status-note")).toHaveLength(1);
 
-    act(() => realtime.callbacks.get("board-statuses:team")?.({ new: status("jo", "blocked", "Need access to the staging server") }));
+    await post(status("jo", "blocked", "Need access to the staging server"));
     expect(screen.getAllByTestId("status-note")).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Blocked 2" })).toHaveAttribute("aria-pressed", "true");
 
-    act(() => realtime.callbacks.get("board-statuses:team")?.({ new: status("sam", "working", "Assets are ready") }));
+    await post(status("sam", "working", "Assets are ready"));
     expect(screen.getAllByTestId("status-note")).toHaveLength(1);
     expect(screen.getByTestId("status-note")).toHaveAttribute("data-profile-id", "jo");
     expect(within(screen.getByTestId("status-note")).getByRole("button", { name: "Nudge Jo Lee" })).toBeVisible();
@@ -103,14 +118,17 @@ describe("Board search and status filters", () => {
     expect(screen.queryByRole("region", { name: "Teammates without an update" })).not.toBeInTheDocument();
   });
 
-  it("prioritizes blockers and sorts recent updates without dropping a search", async () => {
+  it("keeps blockers first and sorts recent updates within a band without dropping a search", async () => {
     const user = userEvent.setup();
     renderBoard();
     await user.selectOptions(screen.getByRole("combobox", { name: "Sort updates" }), "attention");
     expect(screen.getAllByTestId("status-note")[0]).toHaveAttribute("data-profile-id", "sam");
-    act(() => realtime.callbacks.get("board-statuses:team")?.({ new: { ...status("jo", "working", "Newest work"), started_at: new Date(Date.now() + 1000).toISOString() } }));
+    await post({ ...status("jo", "working", "Newest work"), started_at: new Date(Date.now() + 1000).toISOString() });
     await user.selectOptions(screen.getByRole("combobox", { name: "Sort updates" }), "latest");
-    expect(screen.getAllByTestId("status-note")[0]).toHaveAttribute("data-profile-id", "jo");
+    // Blockers always burn above everything; the sort orders each band.
+    const notes = screen.getAllByTestId("status-note");
+    expect(notes[0]).toHaveAttribute("data-profile-id", "sam");
+    expect(notes[1]).toHaveAttribute("data-profile-id", "jo");
     await user.type(screen.getByRole("searchbox"), "assets");
     await user.selectOptions(screen.getByRole("combobox", { name: "Sort updates" }), "name");
     expect(screen.getAllByTestId("status-note")).toHaveLength(1);
@@ -121,14 +139,15 @@ describe("Board search and status filters", () => {
     const user = userEvent.setup();
     renderBoard();
     expect(screen.getByText("Connecting…")).toBeInTheDocument();
-    act(() => realtime.subscriptions.get("board-statuses:team")?.("SUBSCRIBED"));
+    await poll();
     expect(screen.getByText("Live updates")).toBeInTheDocument();
     const trigger = screen.getByRole("button", { name: "Open Sam Chen's status" });
     trigger.focus();
-    act(() => realtime.callbacks.get("board-statuses:team")?.({ new: status("sam", "working", "Access restored") }));
+    await post(status("sam", "working", "Access restored"));
     expect(trigger).toHaveFocus();
     expect(screen.getByText("Sam Chen updated their status")).toBeInTheDocument();
-    act(() => realtime.subscriptions.get("board-statuses:team")?.("CHANNEL_ERROR"));
+    live.failing = true;
+    await poll();
     expect(screen.getByText("Reconnecting…")).toBeInTheDocument();
     expect(screen.getAllByTestId("status-note")).toHaveLength(2);
     await user.type(screen.getByRole("searchbox"), "no-match");
@@ -140,7 +159,7 @@ describe("Board search and status filters", () => {
     const user = userEvent.setup();
     renderBoard();
     await user.click(screen.getByRole("button", { name: "Blocked 1" }));
-    act(() => realtime.callbacks.get("board-statuses:team")?.({ new: status("sam", "working", "Unblocked") }));
+    await post(status("sam", "working", "Unblocked"));
     expect(screen.getByRole("button", { name: "Blocked 0" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("No matching updates")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Blocked 0" }));

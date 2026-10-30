@@ -1,9 +1,9 @@
-# Workspace
+# Emberspace
 
 An ambient status board that replaces the daily standup. Everyone posts what
 they're working on; two shared views show the whole team at a glance.
 
-Workspace is an **attention layer, not a chat app.** It never carries
+Emberspace is an **attention layer, not a chat app.** It never carries
 conversation — when someone needs a teammate, it produces a nudge that sends
 them to Slack, Discord, or wherever the team actually talks.
 
@@ -14,69 +14,68 @@ them to Slack, Discord, or wherever the team actually talks.
 | Next.js | 15.5.22, App Router |
 | React | 19.1 |
 | Tailwind | v4, tokens via `@theme` in `app/globals.css` |
-| Supabase | Postgres + RLS + Realtime + pg_cron |
-| Auth | `@supabase/ssr` (never `auth-helpers-nextjs`) |
+| Database | Postgres on Neon (via the Vercel Marketplace), RLS on every table |
+| Auth | Better Auth, email + password, tables in the same database |
+| Live data | Short polling from the browser (`app/live-actions.ts`) |
 | Animation | `motion`, imported from `motion/react` |
 | Tests | Vitest, Playwright, pgTAP |
 
-The whole backend is Postgres. No Edge Functions, no third-party services.
+The whole backend is Postgres plus the app's own server code. No Edge Functions,
+no third-party services.
 
 ## Environment
 
-Three variables. That's the whole file.
+Three variables.
 
 ```bash
-cp .env.example .env.local
+vercel env pull .env.local     # if Neon was added through Vercel
+# or: cp .env.example .env.local and fill it in
 ```
 
 | Variable | Where it comes from |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Dashboard → Project Settings → Data API → Project URL |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Dashboard → Project Settings → API Keys → Publishable key |
+| `DATABASE_URL` | Set by Vercel when Neon is added (Storage → Create → Neon). Server-only. |
+| `BETTER_AUTH_SECRET` | You make it: `openssl rand -base64 32`. Add it in Vercel → Settings → Environment Variables. Server-only. |
 | `NEXT_PUBLIC_SITE_URL` | The domain this deployment answers on. Blank locally. |
 
-The **publishable key** is the new name for the anon key (`sb_publishable_…`
-rather than a JWT). They are interchangeable and both are safe in the browser —
-they carry no privileges of their own, RLS decides everything.
+### Nothing bypasses RLS
 
-### There is no service-role key here
-
-Deliberately. Non-negotiable #4 forbids bypassing RLS, and nothing in this app
-needs to:
+The app connects as the database owner, but every user request steps down into
+the `authenticated` role with that user's id set for `auth.uid()`
+(`lib/db.ts`, `withUser`). So the policies and grants in `db/migrations` decide
+everything, exactly as they did on Supabase:
 
 - every write goes through a **security-definer RPC executed as the signed-in
   user**, so the tables have no insert policies at all;
 - notifications are written by **triggers**;
-- the scheduler runs **inside Postgres** on pg_cron.
+- the browser holds **no database credential** — it reaches data only through
+  server actions (`app/actions.ts`, `app/live-actions.ts`).
 
-If a feature ever seems to need the secret key, that's a signal the fix belongs
-in a policy or an RPC instead.
+The one owner-level call is the scheduler (`lib/scheduler.ts`), which runs
+`enqueue_due_nudges()` and `expire_due_durations()` — functions revoked from
+every client role because they act on the whole database.
 
 ## Running locally
 
-Requires Docker.
-
 ```bash
 pnpm install
-pnpm exec supabase start        # first run pulls several GB
-pnpm exec supabase db reset     # replay migrations + seed
+vercel env pull .env.local      # DATABASE_URL + BETTER_AUTH_SECRET
+pnpm db:migrate                 # apply db/migrations
+pnpm db:seed                    # optional: a team at every decay tier, plus a test account
 pnpm dev
 ```
 
-`supabase start` prints a local API URL and anon key — put those in
-`.env.local` to develop against the local stack instead of the hosted project.
-
-| Service | URL |
-|---|---|
-| API | http://127.0.0.1:54321 |
-| Postgres | `postgresql://postgres:postgres@127.0.0.1:54322/postgres` |
-| Studio | http://127.0.0.1:54323 |
-| Mail (Mailpit) | http://127.0.0.1:54324 |
+Local development runs against a Neon database too — there is no local stack to
+install. Use a separate Neon **branch** for development (Neon console →
+Branches) so experiments never touch production data, and point `.env.local`'s
+`DATABASE_URL` at it.
 
 The seed creates a **Product** team with five people deliberately spread across
 the staleness ladder, so every decay tier is visible the first time you open
-`/board`. All of them sign in at `/login` by magic link; the email lands in
-Mailpit.
+`/board`, plus `test@example.com` — a member with no status yet, the account
+to try things as. All of them sign in at `/login` with the password
+`password123` (`test@example.com`, `dana@example.com`, `lance@example.com` is
+the team head, …).
 
 ### Getting onto a team
 
@@ -90,47 +89,41 @@ its head. The code is eight characters with no ambiguous glyphs, shown on
 no nudge policy to navigate to until you belong somewhere, so there is no top
 bar either.
 
-## Running against the hosted project
+## Deploying
 
-```bash
-pnpm exec supabase link --project-ref <your-project-ref>
-pnpm exec supabase db push
-```
+1. In Vercel, add Neon to the project: **Storage → Create → Neon**, connected to
+   Production, Preview and Development. That sets `DATABASE_URL`.
+2. Add `BETTER_AUTH_SECRET` (and `NEXT_PUBLIC_SITE_URL` for production).
+3. Apply the schema once from your machine: `vercel env pull .env.local`, then
+   `pnpm db:migrate`. Re-run it after every new migration.
+4. Deploy.
 
-Then enable **pg_cron** (Dashboard → Database → Extensions) and re-run
-`db push` — `20260805090600_scheduler.sql` skips scheduling with a notice if the
-extension isn't available, rather than failing the whole migration.
+`pnpm db:reset --yes` drops every table and re-applies the migrations from
+scratch. It is for disposable test databases only.
 
-### Sign-in in production
+### Sign-in
 
-Email and password. No magic link, no OAuth providers.
+Email and password. No magic link, no OAuth providers, nothing that sends email —
+so nothing that can be rate limited.
 
-The magic link was removed deliberately. Supabase's built-in sender allows a
-couple of emails **per hour across the whole project**, which is fine for one
-developer and useless the moment three colleagues try to sign in at once. Every
-credential path here therefore touches no email infrastructure at all.
+The consequence to accept: **there is no self-serve password recovery.** A
+forgotten password is reset by whoever runs the database. For a small team that
+is a fair trade for sign-in with no moving parts.
 
-Two settings make that true, and both are on the Supabase project rather than in
-this repo:
+### Live updates without Realtime
 
-1. **Authentication -> Sign In / Providers -> Email -> Confirm email: OFF.**
-   With it on, `signUp` returns no session and the account is inert until a link
-   is opened — which puts the rate-limited mail server back in the critical
-   path. `/signup` detects this and names the setting rather than pretending to
-   have worked.
-2. **`NEXT_PUBLIC_SITE_URL`** on the host, plus Site URL and Redirect URLs under
-   Authentication -> URL Configuration. Only needed if confirmations are ever
-   switched back on, but wrong values are invisible until then, so set them now.
+Neon has no push channel, so the board asks for a fresh snapshot every 5 seconds
+and the bell every 10, only while the tab is visible. A hidden tab does not poll,
+which is what lets Neon's free tier sleep when nobody is looking. Updates land a
+few seconds late; for a board people glance at, that is the right trade.
 
-The consequence to accept: **there is no self-serve password recovery.** Until
-custom SMTP is configured, a forgotten password is reset from the Supabase
-dashboard by whoever owns the project. For a small team that is a fair trade for
-sign-in that cannot be rate limited.
+"Who's online" is a last-seen time per person (`public.presence`), written by
+each poll. Someone counts as here while their last poll is under 45 seconds old.
 
-**Before a real team uses this, configure custom SMTP.** Supabase's built-in
-email sender only delivers to your own project members and is rate-limited to a
-handful of messages an hour — fine for testing, useless the moment a colleague
-tries to sign in.
+The staleness nudges and timed status switches used to run on pg_cron every
+minute. Neon only runs cron while awake, so they now run on board polls,
+throttled to once a minute — nudges are created while someone has the app open,
+which is when they can be seen.
 
 ## Commands
 
@@ -138,41 +131,51 @@ tries to sign in.
 pnpm dev
 pnpm typecheck
 pnpm lint
-pnpm test                              # vitest: decay + RPC wrappers
+pnpm test                              # vitest: decay, RPC wrappers, board
 pnpm test:e2e                          # playwright: log in, post, see the note
-pnpm exec supabase test db             # pgTAP: the scheduler guard
-pnpm db:reset                          # replay migrations locally
-pnpm db:types                          # regenerate lib/database.types.ts
+pnpm db:migrate                        # apply new migrations to DATABASE_URL
+pnpm db:seed                           # development seed
+pnpm db:test                           # pgTAP: the scheduler guard
+pnpm db:reset --yes                    # drop everything and re-apply
 ```
 
-**Regenerate types after every migration.** A stale `database.types.ts` is the
-most common source of confusing type errors in this project.
+**Update `lib/database.types.ts` with every migration.** It is maintained by
+hand now — nothing generates it from Neon — and a stale one is the most common
+source of confusing type errors in this project.
 
 ## Where things live
 
 ```
 app/
   page.tsx          the landing page — the one indexable route
+  actions.ts        server actions: the write API, settings writes
+  live-actions.ts   server actions: board snapshot + notifications (polled)
+  api/auth/         Better Auth's endpoints
   (app)/            authenticated shell — top bar, drafting grid
-    board/          corkboard of sticky notes (server shell + client realtime)
-    office/         floor-plan view                        [shell]
+    board/          the board (server shell + polling client)
+    office/         floor-plan view                        [parked]
     me/             set my status — the most important screen
-    timeline/       today's history
+    timeline/       one day's history
     settings/team/  membership for everyone; nudge policy + join code head-only
-    settings/me/    nudge preferences, pause, message link
-  login/            Google OAuth + magic link
-  auth/callback/    code -> session cookie
+    settings/me/    nudge preferences, pause, message link, password
+  login/ signup/    email + password
   auth/signout/     POST only — ends the session server-side
 components/
   status-note.tsx   the sticky note, including the decay treatment
   status-detail.tsx what a card opens to: full note, details, real timestamps
 lib/
-  staleness.ts      the decay thresholds — single source, unit tested
+  db.ts             the Postgres pool and withUser() — every query goes through it
+  auth.ts           Better Auth (server); auth-client.ts is the browser half
+  queries.ts        server-side reads for first paint
   rpc.ts            typed wrappers over the write API
-  supabase/         browser / server / middleware clients
-supabase/
+  scheduler.ts      the two jobs pg_cron used to run
+  staleness.ts      the decay thresholds — single source, unit tested
+db/
   migrations/       ground truth. Never invent a table or column.
   tests/            pgTAP
+  seed.sql          development data
+scripts/
+  migrate.mjs seed.mjs test-sql.mjs
 ```
 
 ## The two kinds of nudge
@@ -182,7 +185,7 @@ collapse them into one UI.
 
 | | **Peer nudge** | **System nudge** |
 |---|---|---|
-| Sent by | a teammate, from the board | `pg_cron`, on staleness |
+| Sent by | a teammate, from the board | the scheduler, on staleness |
 | Asks for | attention — go look at your DMs | a status update |
 | Resolves via | `acknowledge_nudge()` | `respond_to_nudge()` or any `set_status()` |
 | Can stack | yes | no, one open at a time |

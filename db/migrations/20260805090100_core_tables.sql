@@ -48,7 +48,7 @@ create table public.teams (
 -- profiles
 -- ---------------------------------------------------------------------------
 create table public.profiles (
-  id                    uuid primary key references auth.users (id) on delete cascade,
+  id                    uuid primary key references public.auth_user (id) on delete cascade,
   team_id               uuid        references public.teams (id) on delete set null,
   role                  public.team_role not null default 'member',
 
@@ -153,6 +153,8 @@ create index desks_team_idx on public.desks (team_id);
 -- ---------------------------------------------------------------------------
 -- New signup -> profile row
 -- ---------------------------------------------------------------------------
+-- Better Auth writes public.auth_user; the name is the one asked for on the
+-- signup form. The email fallback only covers an account made some other way.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -164,11 +166,10 @@ begin
   values (
     new.id,
     coalesce(
-      nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''),
-      nullif(trim(new.raw_user_meta_data ->> 'name'), ''),
+      nullif(left(trim(new.name), 60), ''),
       split_part(coalesce(new.email, 'someone'), '@', 1)
     ),
-    nullif(trim(new.raw_user_meta_data ->> 'avatar_url'), '')
+    nullif(trim(new.image), '')
   )
   on conflict (id) do nothing;
   return new;
@@ -176,7 +177,7 @@ end;
 $$;
 
 create trigger on_auth_user_created
-  after insert on auth.users
+  after insert on public.auth_user
   for each row execute function public.handle_new_user();
 
 create or replace function public.touch_updated_at()

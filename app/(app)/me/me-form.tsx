@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+import { StateIcon } from "@/components/state-icon";
 import { StatusNote, type NoteStatus } from "@/components/status-note";
 import { Button } from "@/components/ui/button";
 import { ErrorNote, Field, Input, Textarea } from "@/components/ui/field";
 import { RpcError, setStatus } from "@/lib/rpc";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/data-client";
 import {
   STATUS_STATES,
   presentationFor,
@@ -34,10 +35,10 @@ interface Props {
  *
  *   submit
  *     -> optimistic local update (the card flips immediately)
- *     -> supabase.rpc('set_status')
+ *     -> set_status, via a server action (app/actions.ts)
  *     -> Postgres closes the old row, inserts the new one, resolves any open
  *        system nudge, saves the quick pick
- *     -> Realtime broadcasts the INSERT and every other client patches
+ *     -> every other board picks up the new row on its next poll (~5s)
  *
  * On failure the optimistic update rolls back and the message says what failed
  * and what to do. Never a bare "Something went wrong".
@@ -178,7 +179,7 @@ export function MeForm({
                     } as React.CSSProperties
                   }
                 >
-                  <span className="state-dot" aria-hidden="true" />
+                  <StateIcon state={s} />
                   {look.label}
                   {s === state && <svg className="status-state-check" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m3 8 3 3 7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                 </button>
@@ -334,7 +335,7 @@ export function MeForm({
                   className="status-recent-pick"
                   style={{ "--state": presentationFor(pick.state).accent } as React.CSSProperties}
                 >
-                  <span className="state-dot" aria-hidden="true" />
+                  <StateIcon state={pick.state} />
                   <span>{pick.note ?? presentationFor(pick.state).label}</span>
                 </button>
               ))}

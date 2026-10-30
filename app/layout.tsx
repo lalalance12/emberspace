@@ -59,26 +59,26 @@ const DESCRIPTION =
  * listing you have no way left to suppress. Disallow hides a page from the
  * crawler; noindex hides it from the index. The second one is what we want.
  *
- * The rest of this is for the unfurl. Nudges send people to Slack, so Workspace
+ * The rest of this is for the unfurl. Nudges send people to Slack, so Emberspace
  * links get pasted into Slack, and each one used to arrive as the bare word
- * "Workspace" with no image and no sentence.
+ * "Emberspace" with no image and no sentence.
  */
 export const metadata: Metadata = {
   // opengraph-image and the manifest resolve against this. Without it Next
   // emits a relative og:image, which unfurlers drop on the floor.
   metadataBase: new URL(siteURL()),
-  title: { default: "Workspace", template: "%s · Workspace" },
+  title: { default: "Emberspace", template: "%s · Emberspace" },
   description: DESCRIPTION,
-  applicationName: "Workspace",
+  applicationName: "Emberspace",
   openGraph: {
     type: "website",
-    siteName: "Workspace",
-    title: "Workspace",
+    siteName: "Emberspace",
+    title: "Emberspace",
     description: DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Workspace",
+    title: "Emberspace",
     description: DESCRIPTION,
   },
   robots: { index: false, follow: false },

@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 
+import { StateIcon } from "@/components/state-icon";
 import { decayFor } from "@/lib/staleness";
-import { presentationFor } from "@/lib/status-state";
+import { heatFor, presentationFor } from "@/lib/status-state";
 
 export interface NoteStatus {
   id: string;
@@ -53,6 +54,13 @@ interface Props {
    * for free, and nests nothing.
    */
   onOpen?: () => void;
+  /**
+   * How much room the card gets. The board's ember bed uses all three: a full
+   * card while an update is glowing, a slim row once it is warm, a one-line
+   * chip in the ash. Same markup in every case — the layout is CSS — so focus,
+   * the open trigger and the Nudge slot behave identically wherever it sits.
+   */
+  variant?: "card" | "row" | "chip";
 }
 
 /**
@@ -66,19 +74,21 @@ interface Props {
  * structure stayed, because one element owning the tint is still right.)
  *
  * The decay treatment stays data-driven: data-decay carries the tier and the
- * CSS mixes every colour against it. The card gets two inputs — --state from
- * the status, --tint from its age — and everything else falls out of those.
+ * CSS mixes every colour against it. The card gets three inputs — --state and
+ * data-heat from the status, --tint and --heat from its age — and everything
+ * else falls out of those: the yellow core, the violet, the glow, the bar.
  *
  * The mono age label is always rendered. Under prefers-reduced-motion, with the
  * breathing gone, it is the entire staleness signal.
  */
-export function StatusNote({ status, name, now, action, onOpen, online, isSelf }: Props) {
+export function StatusNote({ status, name, now, action, onOpen, online, isSelf, variant = "card" }: Props) {
   const decay = decayFor({
     startedAt: status.started_at,
     state: status.state,
     now,
   });
   const look = presentationFor(status.state);
+  const heat = heatFor(status.state);
   const blocked = status.state === "blocked";
   const initial = name.trim().slice(0, 1).toUpperCase() || "?";
   // For 'other', the person's own words stand in for the generic state name.
@@ -91,12 +101,15 @@ export function StatusNote({ status, name, now, action, onOpen, online, isSelf }
     <div
       className="note-wrap status-card-wrap"
       data-decay={decay.tier}
+      data-heat={heat}
+      data-variant={variant}
       data-blocked={blocked}
       style={{ "--state": look.accent } as React.CSSProperties}
     >
       <article
         className="note status-card"
         data-decay={decay.tier}
+        data-heat={heat}
         data-blocked={blocked}
         data-testid="status-note"
         data-state={status.state}
@@ -124,7 +137,7 @@ export function StatusNote({ status, name, now, action, onOpen, online, isSelf }
         </header>
 
         <div className="status-card-labels">
-          <span className="status-card-state"><span className="state-dot" aria-hidden="true" />{label}</span>
+          <span className="status-card-state"><StateIcon state={status.state} />{label}</span>
             {status.duration_minutes != null && (
               <span
                 className="status-card-duration"
@@ -170,6 +183,8 @@ export function StatusNote({ status, name, now, action, onOpen, online, isSelf }
           <span className="status-card-open-hint">{onOpen ? <>View update <span aria-hidden="true">↗</span></> : "Latest status"}</span>
           <div className="status-card-action">{action}</div>
         </footer>
+
+        <span className="note-heat" aria-hidden="true" />
       </article>
 
       {/* Sibling, not child: see the note above. */}

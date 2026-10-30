@@ -1,40 +1,56 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import {
-  motion, useMotionValue, useMotionValueEvent, useReducedMotion,
+  motion, useMotionValue, useMotionValueEvent,
   useScroll, useSpring, useTransform,
 } from "motion/react";
 
 import { BrandMark } from "@/components/brand-mark";
 import { Icon } from "@/components/ui/icon";
 
-type MotionPreference = "system" | "full" | "reduced";
-const MotionPreferenceContext = createContext<{
-  reduced: boolean;
-  preference: MotionPreference;
-  setPreference: (value: MotionPreference) => void;
-}>({
-  reduced: false,
-  preference: "system" as MotionPreference,
-  setPreference: () => {},
-});
-
+/** The landing page always runs at full motion; there is no preference to set. */
 export function LandingExperience({ children }: { children: ReactNode }) {
-  const [preference, setPreference] = useState<MotionPreference>("system");
-  const [mounted, setMounted] = useState(false);
-  const deviceReduced = useReducedMotion();
-  const reduced = preference === "reduced" || (preference === "system" && Boolean(deviceReduced));
-  // Keep the first client render identical to the server; CSS handles the device
-  // preference before hydration. An explicit choice lasts only for this visit.
-  useEffect(() => setMounted(true), []);
-
-  return <MotionPreferenceContext.Provider value={{ reduced, preference, setPreference }}><div className="public-site landing-experience" data-motion={mounted ? reduced ? "reduced" : "full" : "system"}>{children}</div></MotionPreferenceContext.Provider>;
+  return <div className="public-site landing-experience"><WaveBackdrop />{children}</div>;
 }
 
-export function MotionPreferenceControl() {
-  const { preference, setPreference } = useContext(MotionPreferenceContext);
-  return <label className="landing-motion-control"><Icon name="settings" width="14" height="14" /><span>Motion</span><select aria-label="Motion preference" value={preference} onChange={(event) => setPreference(event.target.value as MotionPreference)}><option value="system">Device setting</option><option value="full">Full motion</option><option value="reduced">Reduced motion</option></select></label>;
+/**
+ * Slow violet waves behind everything, so the page reads as paper under light,
+ * not a blank sheet. Sign-in and sign-up sit on the same ground.
+ */
+export function WaveBackdrop() {
+  return (
+    <div className="landing-backdrop" aria-hidden="true">
+      <span className="landing-glow landing-glow-a" />
+      <span className="landing-glow landing-glow-b" />
+      <span className="landing-glow landing-glow-c" />
+      <span className="landing-wave landing-wave-1" />
+      <span className="landing-wave landing-wave-2" />
+      <span className="landing-wave landing-wave-3" />
+    </div>
+  );
+}
+
+/** The shared --ease-out curve, for Motion values that cannot read a CSS token. */
+const easeOut = [0.23, 1, 0.32, 1] as const;
+
+/**
+ * A section that rises into place the first time it scrolls into view. Once:
+ * re-animating on every scroll-by is an interface fighting its reader.
+ */
+export function RevealSection({ children, className, labelledBy }: { children: ReactNode; className?: string; labelledBy?: string }) {
+  return (
+    <motion.section
+      className={className}
+      aria-labelledby={labelledBy}
+      initial={{ opacity: 0, transform: "translateY(48px) scale(0.97)" }}
+      whileInView={{ opacity: 1, transform: "translateY(0px) scale(1)" }}
+      viewport={{ once: true, margin: "-100px" }}
+      transition={{ duration: 0.8, ease: easeOut }}
+    >
+      {children}
+    </motion.section>
+  );
 }
 
 const exampleNotes = [
@@ -47,14 +63,13 @@ const exampleNotes = [
 /** CSS depth with a small pointer-driven tilt; no render loop or WebGL bundle. */
 export function HeroBoard() {
   const [later, setLater] = useState(false);
-  const { reduced: reduceMotion } = useContext(MotionPreferenceContext);
   const pointerX = useMotionValue(0);
   const pointerY = useMotionValue(0);
   const rotateX = useSpring(pointerY, { stiffness: 120, damping: 22 });
   const rotateY = useSpring(pointerX, { stiffness: 120, damping: 22 });
 
   function tilt(event: PointerEvent<HTMLDivElement>) {
-    if (reduceMotion || event.pointerType !== "mouse") return;
+    if (event.pointerType !== "mouse") return;
     const rect = event.currentTarget.getBoundingClientRect();
     pointerX.set(((event.clientX - rect.left) / rect.width - 0.5) * 10);
     pointerY.set(((event.clientY - rect.top) / rect.height - 0.5) * -8);
@@ -79,8 +94,8 @@ export function HeroBoard() {
               </div>
               <div className="landing-model-title"><h2>Today, together.</h2><span>4 teammates</span></div>
               <div className="landing-model-notes">
-                {exampleNotes.map((note) => (
-                  <div className="landing-model-note" data-state={note.state} key={note.name}>
+                {exampleNotes.map((note, index) => (
+                  <div className="landing-model-note" data-state={note.state} key={note.name} style={{ "--note-index": index } as CSSProperties}>
                     <div className="landing-model-person"><span>{note.name[0]}</span><strong>{note.name}</strong><span className="landing-model-state">{note.label}</span></div>
                     <p>{note.note}</p>
                     <div className="landing-model-meta"><span>{note.ticket}</span><span>{later ? note.state === "blocked" ? "7h ago" : "Stale · 7h" : note.age}</span></div>
@@ -140,12 +155,23 @@ export function ScrollStory() {
         <div className="landing-story-chapters">
           {chapters.map((item, index) => (
             <article className="landing-chapter" id={`story-${index + 1}`} key={item.number}>
-              <div className="landing-chapter-copy">
-                <p className="landing-chapter-label"><span>{item.number}</span>{item.label}</p>
-                <h3>{item.title.split("\n").map((line) => <span key={line}>{line}</span>)}</h3>
-                <p className="landing-chapter-body">{item.body}</p>
+              <motion.div
+                className="landing-chapter-card"
+                data-chapter={index}
+                initial={{ opacity: 0, transform: `translateY(56px) rotate(${index % 2 ? 1.5 : -1.5}deg)` }}
+                whileInView={{ opacity: 1, transform: "translateY(0px) rotate(0deg)" }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.75, ease: easeOut }}
+              >
+                <span className="landing-chapter-watermark" aria-hidden="true">{item.number}</span>
+                <div className="landing-chapter-copy">
+                  <p className="landing-chapter-label"><span>{item.number}</span>{item.label}</p>
+                  <h3>{item.title.split("\n").map((line) => <span key={line}>{line}</span>)}</h3>
+                  <p className="landing-chapter-body">{item.body}</p>
+                </div>
+                <ChapterVignette index={index} />
                 <p className="landing-chapter-detail"><Icon name={item.icon} width="17" height="17" />{item.detail}</p>
-              </div>
+              </motion.div>
             </article>
           ))}
         </div>
@@ -182,5 +208,56 @@ export function ScrollStory() {
         </div>
       </div>
     </section>
+  );
+}
+
+const freshness = [
+  { age: "Now", tint: 1 },
+  { age: "1H", tint: 0.72 },
+  { age: "3H", tint: 0.42 },
+  { age: "7H", tint: 0.14 },
+] as const;
+
+/** A small working picture of each chapter, looping so the idea is seen rather than read. */
+function ChapterVignette({ index }: { index: number }) {
+  if (index === 0) {
+    return (
+      <div className="landing-vignette landing-vignette-post" aria-hidden="true">
+        <div className="landing-vig-chips"><span data-active="true">Working</span><span>Reviewing</span><span>On a break</span></div>
+        <div className="landing-vig-input"><span className="landing-vig-typed">Making checkout feel effortless</span><i className="landing-vig-caret" /></div>
+        <div className="landing-vig-row"><span>WS-118</span><span className="landing-vig-button">Post update <Icon name="arrow" width="12" height="12" /></span></div>
+      </div>
+    );
+  }
+  if (index === 1) {
+    return (
+      <div className="landing-vignette landing-vignette-settle" aria-hidden="true">
+        <div className="landing-vig-strip">
+          {freshness.map((step, i) => (
+            <div className="landing-vig-swatch" key={step.age} style={{ "--swatch-tint": step.tint, "--swatch-index": i } as CSSProperties}>
+              <span className="landing-vig-swatch-fill" />
+              <span className="landing-vig-swatch-line" /><span className="landing-vig-swatch-line" />
+              <span className="landing-vig-age">{step.age}</span>
+            </div>
+          ))}
+        </div>
+        <div className="landing-vig-clock"><span className="landing-vig-playhead" /></div>
+        <div className="landing-vig-scale"><span>09:00</span><span>16:00</span></div>
+      </div>
+    );
+  }
+  return (
+    <div className="landing-vignette landing-vignette-notice" aria-hidden="true">
+      <div className="landing-vig-blocked">
+        <span className="landing-vig-avatar">R</span>
+        <div><strong>Ravi <em>Blocked</em></strong><span>Waiting on the staging key</span></div>
+        <span className="landing-vig-age">7H</span>
+      </div>
+      <div className="landing-vig-nudge">
+        <span className="landing-vig-nudge-icon"><Icon name="spark" width="13" height="13" /></span>
+        <span>Dana nudged you. Check your messages.</span>
+        <span className="landing-vig-nudge-link">Slack ↗</span>
+      </div>
+    </div>
   );
 }

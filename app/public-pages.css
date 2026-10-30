@@ -61,32 +61,36 @@
 .public-footer .public-wordmark > span { font-size: 17px; }
 .public-footer nav { display: flex; gap: 24px; margin-left: auto; }
 
-/* Authentication: one clear form, one quiet picture of the product. */
-.public-auth { display: grid; grid-template-columns: minmax(410px, 1fr) minmax(0, 1.1fr); min-height: 100dvh; padding: 16px; gap: 16px; }
-.public-auth-main { display: flex; flex-direction: column; padding: 26px clamp(30px, 5vw, 80px) 12px; }
+/* Authentication: one clear form, one quiet picture of the product.
+   The page is exactly one viewport: spacing scales with the height available,
+   and the decorative parts step aside on short screens, so nothing scrolls. */
+.public-auth { display: grid; grid-template-columns: minmax(410px, 1fr) minmax(0, 1.1fr); height: 100dvh; overflow: hidden; padding: 16px; gap: 16px; }
+.public-auth-main { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: clamp(10px, 2.6vh, 26px) clamp(30px, 5vw, 80px) clamp(6px, 1.2vh, 12px); }
+.public-auth-main::-webkit-scrollbar { display: none; }
 .public-auth-logo { align-self: flex-start; }
-.public-auth-form { width: 100%; max-width: 375px; margin: auto; padding: 64px 0; }
-.public-auth-form h1 { margin-top: 16px; font-size: clamp(32px, 3vw, 41px); letter-spacing: -0.045em; line-height: 1.16; }
-.public-auth-subtitle { color: var(--ink-soft); font-size: 15px; line-height: 1.65; margin: 13px 0 31px; }
-.public-entry-form { display: flex; flex-direction: column; gap: 21px; }
-.public-entry-form > label { gap: 8px; }
+.public-auth-form { width: 100%; max-width: 375px; margin: auto; padding: clamp(4px, 4vh, 64px) 0; }
+.public-auth-form h1 { margin-top: clamp(8px, 1.8vh, 16px); font-size: clamp(28px, min(3vw, 5.4vh), 41px); letter-spacing: -0.045em; line-height: 1.16; }
+.public-auth-subtitle { color: var(--ink-soft); font-size: 15px; line-height: 1.65; margin: clamp(4px, 1.2vh, 13px) 0 clamp(12px, 3vh, 31px); }
+.public-entry-form { display: flex; flex-direction: column; gap: clamp(10px, 2vh, 21px); }
+.public-entry-form > label { gap: clamp(4px, 1vh, 8px); }
 .public-entry-form > label > .annotation { font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--ink); text-transform: none; letter-spacing: 0; }
-.public-entry-form .input { min-height: 48px; font-size: 14px; background: var(--surface); }
+.public-entry-form .input { min-height: clamp(38px, 5.4vh, 48px); font-size: 14px; background: var(--surface); }
 .public-entry-form > label > span:last-child:not(.annotation) { font-size: 12px; line-height: 1.5; }
-.public-entry-form > .btn { min-height: 48px; margin-top: 4px; }
-.public-auth-footer { margin-top: 29px; padding-top: 25px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+.public-entry-form > .btn { min-height: clamp(40px, 5.4vh, 48px); margin-top: 4px; }
+.public-auth-footer { margin-top: clamp(12px, 2.6vh, 29px); padding-top: clamp(10px, 2.2vh, 25px); border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
 .public-auth-footer .public-text-link { font-size: inherit; margin-left: 3px; }
-.public-auth-bottom { padding-top: 15px; color: var(--ink-soft); font-size: 11px; }
-.public-auth-story { display: flex; flex-direction: column; justify-content: center; padding: clamp(35px, 5vw, 72px); border-radius: 20px; background: var(--violet-deep); color: white; overflow: hidden; }
+.public-auth-bottom { padding-top: clamp(6px, 1.6vh, 15px); color: var(--ink-soft); font-size: 11px; }
+.public-auth-story { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; padding: clamp(20px, 5vh, 72px) clamp(28px, 5vw, 72px); border-radius: 20px; background: var(--violet-deep); color: white; overflow: hidden; }
+.public-auth-story > * { width: 100%; max-width: 640px; }
 .public-auth-story-copy .public-overline { color: #cebfeb; }
-.public-auth-story-copy h2 { margin-top: 20px; font-size: clamp(35px, 3.6vw, 52px); line-height: 1.12; letter-spacing: -0.045em; }
-.public-auth-story-copy > p:last-child { margin-top: 22px; max-width: 370px; font-size: 15px; line-height: 1.7; color: #d7cde9; }
-.public-auth-demo { overflow: hidden; margin-top: 36px; color: var(--ink); border: 1px solid #ffffff20; border-radius: 13px; background: var(--surface); box-shadow: 0 16px 36px #160c3120; }
+.public-auth-story-copy h2 { margin-top: clamp(10px, 2.2vh, 20px); font-size: clamp(28px, min(3.6vw, 5.8vh), 52px); line-height: 1.12; letter-spacing: -0.045em; }
+.public-auth-story-copy > p:last-child { margin-top: clamp(10px, 2.4vh, 22px); max-width: 370px; font-size: 15px; line-height: 1.7; color: #d7cde9; }
+.public-auth-demo { overflow: hidden; margin-top: clamp(18px, 4vh, 36px); color: var(--ink); border: 1px solid #ffffff20; border-radius: 13px; background: var(--surface); box-shadow: 0 16px 36px #160c3120; }
 .public-auth-demo-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 19px; border-bottom: 1px solid var(--line); }
 .public-auth-demo-header strong { font-family: var(--font-display); font-size: 15px; font-weight: 600; }
 .public-auth-demo-header > span { color: var(--ink-soft); font-size: 10px; }
 .public-compact-demo { padding: 8px; }
-.public-compact-row { display: flex; align-items: center; gap: 10px; padding: 16px 10px; border-radius: 7px; }
+.public-compact-row { display: flex; align-items: center; gap: 10px; padding: clamp(9px, 1.8vh, 16px) 10px; border-radius: 7px; }
 .public-compact-row + .public-compact-row { margin-top: 4px; }
 .public-compact-row[data-state="working"] { background: color-mix(in oklab, var(--violet) 7%, var(--surface)); }
 .public-compact-row[data-state="blocked"] { background: color-mix(in oklab, var(--signal) 7%, var(--surface)); }
@@ -98,7 +102,7 @@
 .public-compact-person > div > span::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--demo-state); }
 .public-compact-person p { margin-top: 4px; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
 .public-compact-age { font-family: var(--font-mono); font-size: 9px; color: var(--ink-soft); white-space: nowrap; }
-.public-auth-story-footer { display: flex; align-items: center; gap: 14px; margin-top: 29px; }
+.public-auth-story-footer { display: flex; align-items: center; gap: 14px; margin-top: clamp(14px, 3.2vh, 29px); }
 .public-auth-story-footer .public-freshness-track i { background: #d4bfff; }
 .public-auth-story-footer p { color: #d7cde9; font-size: 12px; line-height: 1.7; }
 .public-confirmation { padding: 25px; border: 1px solid var(--line); border-radius: 13px; background: color-mix(in oklab, var(--violet) 4%, var(--surface)); overflow-wrap: anywhere; }
@@ -131,8 +135,30 @@
 .public-onboarding-error h1 { margin-top: 14px; font-size: 30px; line-height: 1.2; }
 .public-onboarding-error > p:last-child { margin-top: 15px; font-size: 15px; line-height: 1.7; color: var(--ink-soft); }
 
-@media (min-width: 1600px) {
-  .public-auth { max-width: 1600px; margin-inline: auto; }
+/* Short screens: drop the decoration before the form ever has to scroll. */
+@media (max-height: 780px) {
+  .public-auth-story-copy > p:last-child { display: none; }
+  .public-auth-bottom { display: none; }
+}
+@media (max-height: 700px) {
+  .public-auth-form > .public-overline { display: none; }
+}
+@media (max-height: 660px) {
+  .public-auth-demo { display: none; }
+}
+@media (max-height: 640px) {
+  .public-auth-footer { margin-top: 12px; padding-top: 0; border-top: 0; }
+  .public-entry-form > label > span:last-child:not(.annotation) { line-height: 1.3; }
+}
+@media (max-height: 600px) {
+  .public-auth-subtitle { display: none; }
+  .public-auth-form h1 { margin-bottom: 14px; }
+}
+@media (max-height: 560px) {
+  .public-auth { padding: 10px; gap: 10px; }
+  .public-auth-main { padding-block: 8px 4px; }
+  .public-auth-form h1 { font-size: 26px; }
+  .public-auth-story-footer { display: none; }
 }
 
 @media (max-width: 1100px) {
@@ -169,9 +195,9 @@
   .public-closing-action { max-width: 230px; }
   .public-footer > p { display: none; }
   .public-auth { grid-template-columns: 1fr; padding: 0; }
-  .public-auth-main { min-height: 100dvh; padding: 28px 32px 24px; }
-  .public-auth-form { max-width: 410px; padding: 55px 0; }
-  .public-auth-form h1 { font-size: 38px; }
+  .public-auth-main { padding: clamp(12px, 3vh, 28px) 32px clamp(8px, 2.4vh, 24px); }
+  .public-auth-form { max-width: 410px; padding: clamp(8px, 3vh, 55px) 0; }
+  .public-auth-form h1 { font-size: clamp(28px, 5.4vh, 38px); }
   .public-auth-story { display: none; }
   .public-auth-bottom { text-align: center; }
   .public-onboarding { padding-inline: 24px; }
@@ -214,9 +240,8 @@
   .public-footer { gap: 15px; padding-top: 23px; padding-bottom: 26px; min-height: 0; }
   .public-footer nav { gap: 16px; font-size: 11px; }
   .public-footer .public-wordmark > span { font-size: 15px; }
-  .public-auth-main { padding: 27px 24px 24px; }
-  .public-auth-form { padding: 52px 0; }
-  .public-auth-form h1 { font-size: 34px; }
+  .public-auth-main { padding: clamp(12px, 3vh, 27px) 24px clamp(8px, 2.4vh, 24px); }
+  .public-auth-form h1 { font-size: clamp(27px, 5vh, 34px); }
   .public-onboarding { padding-inline: 20px; }
   .public-onboarding-header { align-items: flex-start; justify-content: flex-start; flex-direction: column; gap: 23px; padding-block: 25px; }
   .public-onboarding-progress { gap: 24px; font-size: 11px; }
@@ -235,3 +260,32 @@
   .public-nav .btn { padding-inline: 9px; font-size: 11px; }
   .public-preview-chrome { padding-inline: 16px; }
 }
+
+/* Auth sits on the landing page's ground: the same waves behind the form, and
+   a lighter echo of them inside the violet panel. */
+.public-auth { position: relative; isolation: isolate; background: var(--canvas); }
+.public-auth-story { position: relative; isolation: isolate; }
+.public-auth-story > .auth-story-wave, .public-auth-story > .auth-story-glow { max-width: none; pointer-events: none; }
+.auth-story-wave { z-index: -1; }
+.auth-story-wave-1 { bottom: 0; height: 34%; background: linear-gradient(180deg, #ffffff12, #b99dff2e); animation: landing-wave-flow 42s linear infinite; }
+.auth-story-wave-2 { bottom: 0; height: 22%; -webkit-mask-size: 1100px 100%; mask-size: 1100px 100%; background: linear-gradient(180deg, #ffffff0d, #9477e540); animation: landing-wave-flow-short 26s linear infinite reverse; }
+.auth-story-glow { position: absolute; z-index: -1; width: 70%; aspect-ratio: 1; right: -25%; top: -30%; border-radius: 50%; background: radial-gradient(circle, #ffb35c38, #9477e53d 60%); filter: blur(60px); animation: landing-drift-b 30s ease-in-out infinite alternate; }
+
+/* The live board. Same frame on both pages; the script inside differs. */
+.auth-board .public-auth-demo-header > div { display: flex; flex-direction: column; gap: 2px; }
+.auth-board-sub { color: var(--ink-soft); font-size: 10px; }
+.auth-board-live { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 99px; background: color-mix(in oklab, var(--color-state-break) 12%, var(--surface)); color: color-mix(in oklab, var(--color-state-break) 70%, var(--ink)); font-family: var(--font-mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.auth-board-live > i { width: 6px; height: 6px; border-radius: 50%; background: var(--color-state-break); animation: auth-live 2s ease-out infinite; }
+.auth-board-code { display: inline-flex; align-items: center; gap: 7px; padding: 4px 9px; border: 1px dashed var(--line-strong); border-radius: 8px; color: var(--ink-soft); font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; transition: border-color 250ms ease, color 250ms ease, background-color 250ms ease, box-shadow 250ms ease; }
+.auth-board-code > span { font-size: 8px; letter-spacing: .08em; text-transform: uppercase; opacity: .7; }
+.auth-board-code[data-shared="true"] { border-style: solid; border-color: var(--violet); background: color-mix(in oklab, var(--violet) 8%, var(--surface)); color: var(--violet-deep); box-shadow: 0 0 0 4px color-mix(in oklab, var(--violet) 10%, transparent); }
+.auth-board-list { position: relative; height: calc(3 * (2 * clamp(9px, 1.8vh, 16px) + 40px) + 24px); overflow: hidden; }
+.auth-board .public-auth-demo-header { padding-block: clamp(9px, 1.4vh, 13px); }
+.auth-board .public-compact-row { background: color-mix(in oklab, var(--demo-state) 7%, var(--surface)); transition: box-shadow 400ms ease; }
+/* A fresh row is an ember: a yellow core rising into violet. */
+.auth-board .public-compact-row[data-fresh="true"]:not([data-state="blocked"]) { background: linear-gradient(90deg, #ffe08a, #ffd3a6 18%, #efd9f3 45%, #e6dcff); box-shadow: 0 0 0 1px #f0cf95, 0 8px 18px -10px #ffab3daa; }
+.auth-board .public-compact-row[data-state="blocked"] { animation: auth-blocked 3.2s ease-in-out infinite; }
+.auth-board .public-compact-row[data-fresh="true"] .public-compact-age { color: #9a5418; font-weight: 600; }
+.auth-board-empty { display: grid; place-items: center; height: 100%; color: var(--ink-soft); font-size: 12px; text-align: center; }
+@keyframes auth-live { 0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-state-break) 55%, transparent); } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
+@keyframes auth-blocked { 0%, 100% { box-shadow: inset 3px 0 0 var(--signal); } 50% { box-shadow: inset 3px 0 0 var(--signal), 0 0 0 1px color-mix(in oklab, var(--signal) 35%, transparent), 0 8px 20px -10px color-mix(in oklab, var(--signal) 60%, transparent); } }

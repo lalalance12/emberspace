@@ -5,7 +5,7 @@ import { TimelineDatePicker } from "./date-picker";
 import { TimelineView, type TimelineRow } from "./timeline-view";
 import { EmptyState, PageHeader } from "@/components/ui/page";
 import { getViewer } from "@/lib/queries";
-import { createClient } from "@/lib/supabase/server";
+import { withUser } from "@/lib/db";
 
 export const metadata: Metadata = { title: "Timeline" };
 
@@ -51,24 +51,23 @@ export default async function TimelinePage({
   const to = new Date(from);
   to.setDate(to.getDate() + 1);
 
-  const supabase = await createClient();
-
-  const [{ data: rows }, { data: members }] = await Promise.all([
-    supabase
-      .from("status_updates")
-      .select(
-        "id, profile_id, state, note, ticket_ref, duration_minutes, custom_label, details, started_at",
-      )
-      .eq("team_id", viewer.profile.team_id)
-      .gte("started_at", from.toISOString())
-      .lt("started_at", to.toISOString())
-      .order("started_at", { ascending: false }),
-    supabase
-      .from("profiles")
-      .select("id, display_name")
-      .eq("team_id", viewer.profile.team_id)
-      .order("display_name"),
-  ]);
+  const teamId = viewer.profile.team_id;
+  const { rows, members } = await withUser(viewer.profile.id, async (db) => {
+    const [history, roster] = await Promise.all([
+      db.query<TimelineRow>(
+        `select id, profile_id, state, note, ticket_ref, duration_minutes, custom_label, details, started_at
+           from public.status_updates
+          where team_id = $1 and started_at >= $2 and started_at < $3
+          order by started_at desc`,
+        [teamId, from.toISOString(), to.toISOString()],
+      ),
+      db.query<{ id: string; display_name: string }>(
+        "select id, display_name from public.profiles where team_id = $1 order by display_name",
+        [teamId],
+      ),
+    ]);
+    return { rows: history.rows, members: roster.rows };
+  });
 
   const count = rows?.length ?? 0;
 

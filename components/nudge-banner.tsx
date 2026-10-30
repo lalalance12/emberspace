@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { Button } from "@/components/ui/button";
 import { RpcError, acknowledgeNudge } from "@/lib/rpc";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/data-client";
 
 export interface PeerNudge {
   id: string;
@@ -39,25 +40,40 @@ export function NudgeBanner({
   nameFor: (id: string | null) => string;
   onAcknowledged: (id: string) => void;
 }) {
-  if (nudges.length === 0) return null;
+  const reduceMotion = useReducedMotion();
+  // Leaves the way it arrived: rising in, settling back down on acknowledge,
+  // so answering a nudge reads as the banner being put away, not deleted.
+  // Under reduced motion only the fade remains.
+  const offset = reduceMotion ? "translateY(0px)" : "translateY(8px)";
 
   return (
-    <div className="mb-6 flex flex-col gap-2">
-      {nudges.map((nudge) => (
-        <NudgeRow
-          key={nudge.id}
-          nudge={nudge}
-          sender={nameFor(nudge.sender_id)}
-          onAcknowledged={onAcknowledged}
-        />
-      ))}
+    <AnimatePresence initial={false}>
+      {nudges.length > 0 && (
+        <motion.div
+          key="nudges"
+          className="mb-6 flex flex-col gap-2"
+          initial={{ opacity: 0, transform: offset }}
+          animate={{ opacity: 1, transform: "translateY(0px)" }}
+          exit={{ opacity: 0, transform: offset, transition: { duration: 0.2, ease: [0.23, 1, 0.32, 1] } }}
+          transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+        >
+          {nudges.map((nudge) => (
+            <NudgeRow
+              key={nudge.id}
+              nudge={nudge}
+              sender={nameFor(nudge.sender_id)}
+              onAcknowledged={onAcknowledged}
+            />
+          ))}
 
-      {olderCount > 0 && (
-        <p className="annotation pl-1">
-          {olderCount} earlier nudge{olderCount === 1 ? "" : "s"} — see the bell
-        </p>
+          {olderCount > 0 && (
+            <p className="annotation pl-1">
+              {olderCount} earlier nudge{olderCount === 1 ? "" : "s"} — see the bell
+            </p>
+          )}
+        </motion.div>
       )}
-    </div>
+    </AnimatePresence>
   );
 }
 
@@ -89,7 +105,7 @@ function NudgeRow({
 
   return (
     <div
-      className="rise-in flex flex-wrap items-center gap-3 border p-4"
+      className="flex flex-wrap items-center gap-3 border p-4"
       style={{
         borderRadius: "var(--radius-card)",
         borderColor: "color-mix(in oklab, var(--violet) 35%, transparent)",
