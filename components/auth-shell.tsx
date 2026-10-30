@@ -38,7 +38,7 @@ export function AuthShell({ variant, title, subtitle, children, footer }: {
     <main className="public-auth">
       <WaveBackdrop />
       <section className="public-auth-main">
-        <Link href="/" className="public-wordmark public-auth-logo" aria-label="Workspace home"><Wordmark size={28} /></Link>
+        <Link href="/" className="public-wordmark public-auth-logo" aria-label="Emberspace home"><Wordmark size={28} /></Link>
         <div className="public-auth-form rise-in">
           <p className="public-overline">Your team, in the loop</p>
           <h1>{title}</h1>
@@ -48,7 +48,7 @@ export function AuthShell({ variant, title, subtitle, children, footer }: {
         </div>
         <p className="public-auth-bottom">A little more clarity in your workday.</p>
       </section>
-      <aside className="public-auth-story" aria-label="About Workspace">
+      <aside className="public-auth-story" aria-label="About Emberspace">
         <span className="auth-story-wave auth-story-wave-1" aria-hidden="true" />
         <span className="auth-story-wave auth-story-wave-2" aria-hidden="true" />
         <span className="auth-story-glow" aria-hidden="true" />

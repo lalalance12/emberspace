@@ -39,7 +39,7 @@ export function readableAuthError(
     case "INVALID_EMAIL":
       return "That doesn't look like an email address. Check it and try again.";
     case "CREDENTIAL_ACCOUNT_NOT_FOUND":
-      return "This account has no password set. Ask whoever runs the workspace to set one.";
+      return "This account has no password set. Ask whoever runs your Emberspace to set one.";
   }
 
   if (status === 429 || /too many requests|rate limit/i.test(message)) {

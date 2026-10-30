@@ -1,9 +1,9 @@
-# Workspace
+# Emberspace
 
 An ambient status board that replaces the daily standup. Everyone posts what
 they're working on; two shared views show the whole team at a glance.
 
-Workspace is an **attention layer, not a chat app.** It never carries
+Emberspace is an **attention layer, not a chat app.** It never carries
 conversation — when someone needs a teammate, it produces a nudge that sends
 them to Slack, Discord, or wherever the team actually talks.
 

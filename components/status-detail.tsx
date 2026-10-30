@@ -15,7 +15,7 @@ import { presentationFor } from "@/lib/status-state";
  * than compressed into "3H".
  *
  * It is a reading surface and nothing else. There is no reply box, no comment
- * thread, no reaction — the moment this could be answered in place, Workspace
+ * thread, no reaction — the moment this could be answered in place, Emberspace
  * would be a chat app with extra steps. The one action it offers is to the
  * owner of the card, and it is a link to /me.
  */

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+import { StateIcon } from "@/components/state-icon";
 import { StatusNote, type NoteStatus } from "@/components/status-note";
 import { Button } from "@/components/ui/button";
 import { ErrorNote, Field, Input, Textarea } from "@/components/ui/field";
@@ -178,7 +179,7 @@ export function MeForm({
                     } as React.CSSProperties
                   }
                 >
-                  <span className="state-dot" aria-hidden="true" />
+                  <StateIcon state={s} />
                   {look.label}
                   {s === state && <svg className="status-state-check" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m3 8 3 3 7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                 </button>
@@ -334,7 +335,7 @@ export function MeForm({
                   className="status-recent-pick"
                   style={{ "--state": presentationFor(pick.state).accent } as React.CSSProperties}
                 >
-                  <span className="state-dot" aria-hidden="true" />
+                  <StateIcon state={pick.state} />
                   <span>{pick.note ?? presentationFor(pick.state).label}</span>
                 </button>
               ))}

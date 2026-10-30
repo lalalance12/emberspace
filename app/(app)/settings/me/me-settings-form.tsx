@@ -74,7 +74,7 @@ export function MeSettingsForm({ profile }: { profile: Profile }) {
           <p>A familiar name and a way for teammates to reach you.</p>
         </div>
         <div className="settings-fields">
-        <Field label="Name" hint="How you appear across your workspace.">
+        <Field label="Name" hint="How you appear across your Emberspace.">
           <Input
             required
             maxLength={60}
@@ -103,7 +103,7 @@ export function MeSettingsForm({ profile }: { profile: Profile }) {
       <section className="settings-section" aria-labelledby="preferences-heading">
         <div className="settings-section-heading">
           <h2 id="preferences-heading">Nudge preferences</h2>
-          <p>Choose how Workspace asks for your attention.</p>
+          <p>Choose how Emberspace asks for your attention.</p>
         </div>
         <div className="settings-fields">
           <div className="settings-preference">

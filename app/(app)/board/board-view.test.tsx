@@ -118,14 +118,17 @@ describe("Board search and status filters", () => {
     expect(screen.queryByRole("region", { name: "Teammates without an update" })).not.toBeInTheDocument();
   });
 
-  it("prioritizes blockers and sorts recent updates without dropping a search", async () => {
+  it("keeps blockers first and sorts recent updates within a band without dropping a search", async () => {
     const user = userEvent.setup();
     renderBoard();
     await user.selectOptions(screen.getByRole("combobox", { name: "Sort updates" }), "attention");
     expect(screen.getAllByTestId("status-note")[0]).toHaveAttribute("data-profile-id", "sam");
     await post({ ...status("jo", "working", "Newest work"), started_at: new Date(Date.now() + 1000).toISOString() });
     await user.selectOptions(screen.getByRole("combobox", { name: "Sort updates" }), "latest");
-    expect(screen.getAllByTestId("status-note")[0]).toHaveAttribute("data-profile-id", "jo");
+    // Blockers always burn above everything; the sort orders each band.
+    const notes = screen.getAllByTestId("status-note");
+    expect(notes[0]).toHaveAttribute("data-profile-id", "sam");
+    expect(notes[1]).toHaveAttribute("data-profile-id", "jo");
     await user.type(screen.getByRole("searchbox"), "assets");
     await user.selectOptions(screen.getByRole("combobox", { name: "Sort updates" }), "name");
     expect(screen.getAllByTestId("status-note")).toHaveLength(1);

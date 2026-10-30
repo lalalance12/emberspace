@@ -3,12 +3,12 @@ import { ImageResponse } from "next/og";
 import { BrandMark } from "@/components/brand-mark";
 
 /**
- * The card a Workspace link turns into when someone pastes it in Slack.
+ * The card an Emberspace link turns into when someone pastes it in Slack.
  *
  * Which is not a hypothetical: the whole nudge feature ends with "go check your
  * messages," so links to this app travel through chat by design. This is the
  * only place the product gets to introduce itself to someone who has never
- * signed in, and it was previously the bare word "Workspace".
+ * signed in, and it was once the bare word "Workspace", the old name.
  *
  * Every colour here is a hex literal, and that is not laziness. This renders
  * through Satori, which supports neither oklch() nor color-mix() — the two
@@ -22,7 +22,7 @@ import { BrandMark } from "@/components/brand-mark";
  */
 
 export const alt =
-  "Workspace — an ambient status board that replaces the daily standup.";
+  "Emberspace — an ambient status board that replaces the daily standup.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -53,7 +53,7 @@ export default function OpengraphImage() {
               The plate is passed as hex because Satori cannot read the token. */}
           <BrandMark size={68} plate="#8141e8" />
           <div style={{ fontSize: 36, fontWeight: 700, color: "#261e3c" }}>
-            Workspace
+            Emberspace
           </div>
         </div>
 

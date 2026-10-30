@@ -25,14 +25,14 @@ export function TopBar({ profileId, displayName, isHead }: {
   return (
     <>
       <aside className="app-sidebar">
-        <Link href="/board" className="sidebar-brand" aria-label="Workspace board">
+        <Link href="/board" className="sidebar-brand" aria-label="Emberspace board">
           <Wordmark size={32} />
         </Link>
         <div className="sidebar-navigation">
-          <p className="sidebar-label">Your workspace</p>
-          <NavLinks items={NAV} label="Workspace" />
+          <p className="sidebar-label">Your Emberspace</p>
+          <NavLinks items={NAV} label="Emberspace" />
           <p className="sidebar-label sidebar-label-manage">Manage</p>
-          <NavLinks items={SETTINGS} label="Manage workspace" />
+          <NavLinks items={SETTINGS} label="Manage Emberspace" />
         </div>
         <div className="sidebar-bottom">
           <div className="sidebar-note">
@@ -44,7 +44,7 @@ export function TopBar({ profileId, displayName, isHead }: {
         </div>
       </aside>
       <header className="app-topbar">
-        <Link href="/board" className="mobile-brand" aria-label="Workspace board"><Wordmark size={28} /></Link>
+        <Link href="/board" className="mobile-brand" aria-label="Emberspace board"><Wordmark size={28} /></Link>
         <div className="topbar-context"><Icon name="team" width={17} height={17} /><span>Your team space</span><span className="topbar-divider" /><span className="topbar-caption">Stay in the loop, at a glance.</span></div>
         <div className="topbar-account">
           <NotificationBell profileId={profileId} />
@@ -52,7 +52,7 @@ export function TopBar({ profileId, displayName, isHead }: {
           <AccountMenu displayName={displayName} isHead={isHead} />
         </div>
       </header>
-      <div className="mobile-navigation"><NavLinks items={[...NAV, ...SETTINGS]} label="Mobile workspace" /></div>
+      <div className="mobile-navigation"><NavLinks items={[...NAV, ...SETTINGS]} label="Mobile navigation" /></div>
     </>
   );
 }

@@ -5,9 +5,10 @@ import { join } from "node:path";
 /**
  * Draw the app mark once, emit every format that asks for it.
  *
- * The mark is a white W on the brand violet — the wordmark's gradient square
- * turns to mush at 16px, and a favicon is read at 16px or not at all, so the
- * icon drops the gradient and keeps the one thing that survives the size.
+ * The mark is an ember on the brand violet: an amber coal glowing yellow
+ * from underneath, a soft violet halo, and two sparks rising off it. It
+ * is built from flat circles, not gradients — a gradient turns to mush at
+ * 16px, and a favicon is read at 16px or not at all.
  *
  * Everything is drawn from signed distance fields rather than rasterised from
  * the SVG, because there is no rasteriser in this project's dependency tree and
@@ -32,27 +33,22 @@ const GRID = 32;
  * idea what oklch is, so hex is the portable spelling.
  */
 const VIOLET = [0x81, 0x41, 0xe8];
-const WHITE = [0xff, 0xff, 0xff];
+
+/* The ember, in layers from the back. Each is [cx, cy, r, colour, opacity]. */
+const HALO = [15, 19.4, 10.2, [0xb5, 0x9b, 0xff], 0.3];
+const COAL = [15, 19.4, 7.4, [0xff, 0xb3, 0x5c], 1];
+// Lower-left of the coal: an ember glows hottest underneath.
+const CORE = [13.4, 21.2, 3.7, [0xff, 0xe3, 0x9a], 1];
+// Two sparks lifting off, shrinking as they rise.
+const SPARK = [22.4, 10.4, 2, [0xff, 0xe3, 0x9a], 1];
+const SPARK_HIGH = [25.6, 5.8, 1.2, [0xff, 0xe3, 0x9a], 1];
+const LAYERS = [HALO, COAL, CORE, SPARK, SPARK_HIGH];
 
 /**
  * Tighter than --radius-control's 10/40. A softer corner reads as a blur at
  * 16px; this one still reads as a corner.
  */
 const CORNER = 7;
-
-/**
- * The W as a stroked polyline, not a filled outline. Round caps and joins are
- * free in a distance field — a segment's isosurface is a capsule — and they sit
- * with the rest of the system, where nothing is sharp.
- */
-const STROKE = 4.4;
-const W_PATH = [
-  [7.6, 9.8],
-  [11.8, 22.2],
-  [16, 14.0],
-  [20.2, 22.2],
-  [24.4, 9.8],
-];
 
 /* --- Distance fields ------------------------------------------------------ */
 
@@ -64,23 +60,9 @@ function sdBox(x, y, half, radius) {
   return outside + Math.min(Math.max(qx, qy), 0) - radius;
 }
 
-/** Distance to the nearest point on a segment. */
-function sdSegment(x, y, [ax, ay], [bx, by]) {
-  const pax = x - ax;
-  const pay = y - ay;
-  const bax = bx - ax;
-  const bay = by - ay;
-  const t = Math.min(1, Math.max(0, (pax * bax + pay * bay) / (bax * bax + bay * bay)));
-  return Math.hypot(pax - bax * t, pay - bay * t);
-}
-
-/** Distance to the whole letter. */
-function sdLetter(x, y) {
-  let d = Infinity;
-  for (let i = 0; i < W_PATH.length - 1; i++) {
-    d = Math.min(d, sdSegment(x, y, W_PATH[i], W_PATH[i + 1]));
-  }
-  return d - STROKE / 2;
+/** Distance to a circle's edge. Negative inside. */
+function sdCircle(x, y, [cx, cy, r]) {
+  return Math.hypot(x - cx, y - cy) - r;
 }
 
 /* --- Raster --------------------------------------------------------------- */
@@ -88,7 +70,7 @@ function sdLetter(x, y) {
 /**
  * Coverage from a distance, in grid units, for a pixel one `px` wide. This is
  * the analytic antialias: at 16px a 4x supersample has only 16 levels to spend
- * on an edge, and the diagonals of the W show it.
+ * on an edge, and a small circle shows it.
  */
 function coverage(d, px) {
   return Math.min(1, Math.max(0, 0.5 - d / px));
@@ -108,12 +90,16 @@ function render(size, rounded) {
       const y = ((py + 0.5) * GRID) / size;
 
       const plate = coverage(sdBox(x, y, GRID / 2, rounded ? CORNER : 0), px);
-      const letter = Math.min(coverage(sdLetter(x, y), px), plate);
+
+      // Composite the ember's layers over the plate, back to front.
+      const colour = [...VIOLET];
+      for (const layer of LAYERS) {
+        const a = Math.min(coverage(sdCircle(x, y, layer), px), plate) * layer[4];
+        for (let c = 0; c < 3; c++) colour[c] += (layer[3][c] - colour[c]) * a;
+      }
 
       const i = (py * size + pxi) * 4;
-      for (let c = 0; c < 3; c++) {
-        out[i + c] = Math.round(VIOLET[c] + (WHITE[c] - VIOLET[c]) * letter);
-      }
+      for (let c = 0; c < 3; c++) out[i + c] = Math.round(colour[c]);
       out[i + 3] = Math.round(plate * 255);
     }
   }
@@ -200,13 +186,17 @@ function encodeICO(frames) {
 
 /* --- SVG ------------------------------------------------------------------ */
 
-function encodeSVG() {
-  const hex = "#" + VIOLET.map((c) => c.toString(16).padStart(2, "0")).join("");
-  const d = W_PATH.map(([x, y], i) => `${i ? "L" : "M"}${x} ${y}`).join(" ");
+const toHex = (rgb) => "#" + rgb.map((c) => c.toString(16).padStart(2, "0")).join("");
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${GRID} ${GRID}" role="img" aria-label="Workspace">
-  <rect width="${GRID}" height="${GRID}" rx="${CORNER}" fill="${hex}"/>
-  <path d="${d}" fill="none" stroke="#ffffff" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round"/>
+function encodeSVG() {
+  const circles = LAYERS.map(
+    ([cx, cy, r, rgb, opacity]) =>
+      `  <circle cx="${cx}" cy="${cy}" r="${r}" fill="${toHex(rgb)}"${opacity < 1 ? ` fill-opacity="${opacity}"` : ""}/>`,
+  ).join("\n");
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${GRID} ${GRID}" role="img" aria-label="Emberspace">
+  <rect width="${GRID}" height="${GRID}" rx="${CORNER}" fill="${toHex(VIOLET)}"/>
+${circles}
 </svg>
 `;
 }

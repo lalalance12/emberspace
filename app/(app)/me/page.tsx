@@ -19,7 +19,7 @@ export default async function MePage() {
   return (
     <>
       <PageHeader
-        eyebrow="Your workspace"
+        eyebrow="Your update"
         title="What are you working on?"
         description="A quick update keeps everyone in the loop."
         meta={current ? "Update your status" : "Your first update"}

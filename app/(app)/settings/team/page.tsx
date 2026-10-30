@@ -74,7 +74,7 @@ export default async function TeamSettingsPage() {
             </span>
             <div>
               <h2>{team.name}</h2>
-              <p>{members.length} {members.length === 1 ? "person" : "people"} sharing this workspace</p>
+              <p>{members.length} {members.length === 1 ? "person" : "people"} sharing this Emberspace</p>
             </div>
           </div>
           <span className="settings-role">{isHead ? "Team head" : "Team member"}</span>

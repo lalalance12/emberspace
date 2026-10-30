@@ -17,7 +17,7 @@ const MAX_NOTE = 11;
  *
  * A few characters and a link out to wherever the team actually talks. There is
  * no reply field and there must never be one — the moment this grows a thread,
- * Workspace stops being a status board and starts competing badly with Slack.
+ * Emberspace stops being a status board and starts competing badly with Slack.
  *
  * Rendered by the board as a sibling of the card, not inside it: anything
  * absolutely positioned within the card is trapped by its bounds, which is why

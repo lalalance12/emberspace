@@ -23,7 +23,7 @@ export default async function LoginPage() {
       subtitle="Sign in to see what everyone is working on."
       footer={
         <>
-          New to Workspace?{" "}
+          New to Emberspace?{" "}
           <Link href="/signup" className="public-text-link">
             Create an account
           </Link>

@@ -8,7 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { getSessionUser } from "@/lib/queries";
 
 export const metadata: Metadata = {
-  title: { absolute: "Workspace — an ambient status board for your team" },
+  title: { absolute: "Emberspace — an ambient status board for your team" },
   robots: { index: true, follow: true },
   alternates: { canonical: "/" },
 };
@@ -20,7 +20,7 @@ export default async function Home() {
     <LandingExperience>
       <a href="#main-content" className="landing-skip-link">Skip to content</a>
       <header className="public-header">
-        <Link href="/" aria-label="Workspace home" className="public-wordmark"><Wordmark size={28} /></Link>
+        <Link href="/" aria-label="Emberspace home" className="public-wordmark"><Wordmark size={28} /></Link>
         <nav aria-label="Main navigation" className="public-nav">
           <a href="#how-it-works" className="public-how-link">How it works</a>
           <Link href="/login" className="btn btn-ghost">Sign in</Link>
@@ -35,7 +35,7 @@ export default async function Home() {
             <h1 id="hero-title" className="landing-enter"><span className="landing-line">Your team&rsquo;s day.</span><br /><em className="landing-line">At a glance.</em></h1>
             <p className="landing-hero-description landing-enter">Know what&rsquo;s moving, who&rsquo;s focused, and where a little help could make a difference. All on one shared board.</p>
             <div className="landing-hero-actions landing-enter">
-              <Link href="/signup" className="btn btn-primary">Start your workspace <Icon name="arrow" width="18" height="18" /></Link>
+              <Link href="/signup" className="btn btn-primary">Start your Emberspace <Icon name="arrow" width="18" height="18" /></Link>
               <Link href="/login" className="landing-inline-link">Join your team <span aria-hidden="true">↗</span></Link>
             </div>
             <p className="landing-hero-footnote landing-enter">A quick update. Fewer check-ins. More room to work.</p>
@@ -51,7 +51,7 @@ export default async function Home() {
           <p className="public-overline">Your next workday, a little clearer</p>
           <h2 id="landing-closing-title">Together on the big picture.<br /><span>Free to focus on your part.</span></h2>
           <p>Give your team one place to see what&rsquo;s happening.<br className="landing-desktop-break" /> Then make room for the work that matters.</p>
-          <Link href="/signup" className="btn landing-closing-cta">Create your workspace <Icon name="arrow" width="19" height="19" /></Link>
+          <Link href="/signup" className="btn landing-closing-cta">Create your Emberspace <Icon name="arrow" width="19" height="19" /></Link>
           <span className="landing-closing-note">Start a team or join one with a code.</span>
         </RevealSection>
       </main>

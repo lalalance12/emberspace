@@ -2,7 +2,10 @@
 .app-shell { --sidebar-width: 232px; padding-left: var(--sidebar-width); background: var(--canvas); }
 .app-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 45; display: flex; flex-direction: column; width: var(--sidebar-width); padding: 32px 20px 24px; background: var(--violet-deep); color: #e0d6f4; --icon-fill: var(--violet-deep); }
 .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 0 9px; }
-.sidebar-brand .gradient-text { background: none; color: white; font-size: 21px; letter-spacing: -.045em; }
+.sidebar-brand .wordmark-text { font-size: 21px; letter-spacing: -.045em; }
+/* On the dark sidebar the lit half glows ember-yellow and the faded half drops to lavender. */
+.sidebar-brand .wordmark-ember { background: none; color: var(--ember-core); }
+.sidebar-brand .wordmark-space { color: #a996d6; }
 .sidebar-navigation { margin-top: 48px; }
 .sidebar-label { margin: 0 13px 13px; color: #bdacd9; font-size: 10px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; }
 .sidebar-label-manage { margin-top: 35px; }
@@ -62,7 +65,7 @@
   .app-topbar { min-height: 68px; padding: 12px 24px; }
   .topbar-context { display: none; }
   .mobile-brand { display: flex; align-items: center; gap: 9px; }
-  .mobile-brand .gradient-text { color: var(--ink); background: none; font-size: 18px; }
+  .mobile-brand .wordmark-text { font-size: 18px; }
   .mobile-navigation { display: block; position: sticky; top: 68px; z-index: 35; padding: 0 20px; border-bottom: 1px solid var(--line); background: var(--surface); }
   .mobile-navigation .app-nav { flex-direction: row; justify-content: space-between; gap: 4px; }
   .mobile-navigation .app-nav-link { justify-content: center; gap: 7px; padding: 14px 12px; min-height: 49px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--ink-soft); font-size: 12px; }

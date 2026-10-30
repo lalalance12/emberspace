@@ -10,7 +10,7 @@ export interface NavItem {
   icon?: IconName;
 }
 
-export function NavLinks({ items, label = "Workspace" }: { items: NavItem[]; label?: string }) {
+export function NavLinks({ items, label = "Emberspace" }: { items: NavItem[]; label?: string }) {
   const pathname = usePathname();
   return (
     <nav className="app-nav" aria-label={label}>

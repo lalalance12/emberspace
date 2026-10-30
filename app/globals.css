@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Workspace — lit and unlit.
+   Emberspace — every status is an ember.
 
    The product is about attention over time: a status is worth something when
-   it is fresh and worth less every hour it sits there. So light is the whole
-   design language. A fresh card is lit — its state colour at full strength,
-   with a matching glow underneath. As it ages the colour drains out of it until
-   the card is near-white and the mono label is all that is left.
+   it is fresh and worth less every hour it sits there. So heat is the whole
+   design language. A fresh card glows: a yellow core rising into violet, with
+   a warm glow underneath. As it ages the yellow goes first, then the violet
+   drains, until the card is near-white ash and the mono label is all that is
+   left. A blocker never cools.
 
    Decay is chromatic, not geometric. A cut corner and a tilt both read as a
    rendering fault rather than as ageing, so the card keeps its shape and loses
@@ -38,15 +39,26 @@
   --color-violet-deep: #382765;
   --color-violet-lift: #9477e5;
 
-  /* --- State hues -------------------------------------------------------- */
-  /* Matched lightness and chroma so the board reads as one system. */
-  --color-state-working: #7351d7; /* violet */
-  --color-state-reviewing: oklch(62% 0.16 235); /* blue */
-  --color-state-blocked: #cf334b; /* keeps white status text readable */
-  --color-state-meeting: oklch(72% 0.16 65); /* amber */
-  --color-state-break: oklch(66% 0.15 165); /* mint */
-  --color-state-off: oklch(62% 0.03 295); /* quiet violet-grey */
-  --color-state-other: oklch(58% 0.045 250); /* slate — a custom state */
+  /* --- Ember ------------------------------------------------------------ */
+  /* The heat. Only ever mixed in by --heat, so yellow on a card always means
+     "posted recently" and never decorates. */
+  --color-ember-core: #ffd25e;
+  --color-ember-amber: #ffb35c;
+  --color-ember-blush: #f6c4dc;
+  --color-ember-spark: #ffe39a;
+
+  /* --- State hues: three heats, not seven colours ------------------------- */
+  /* Colour means attention. Glowing (anyone on something) is violet, burning
+     (blocked) is red, resting (break, done, off) is grey. The activity itself
+     is the label and its icon. Token names stay per state so a state can be
+     given its own hue again in one line if that ever earns its keep. */
+  --color-state-working: #7351d7; /* glowing */
+  --color-state-reviewing: #7351d7; /* glowing */
+  --color-state-blocked: #cf334b; /* burning — keeps white status text readable */
+  --color-state-meeting: #7351d7; /* glowing */
+  --color-state-break: #9a93ab; /* resting */
+  --color-state-off: #9a93ab; /* resting */
+  --color-state-other: #7351d7; /* glowing */
 
   /* --- Type -------------------------------------------------------------- */
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
@@ -80,6 +92,10 @@
   --violet-deep: var(--color-violet-deep);
   --violet-lift: var(--color-violet-lift);
   --signal: var(--color-state-blocked);
+  --ember-core: var(--color-ember-core);
+  --ember-amber: var(--color-ember-amber);
+  --ember-blush: var(--color-ember-blush);
+  --ember-spark: var(--color-ember-spark);
 
   /* The one brand gradient. Violet climbing to blue rather than the usual
      violet-to-pink, so it sits in the same family as the reviewing state and
@@ -154,12 +170,19 @@ h3 {
   line-height: 1.25;
 }
 
-/* A word set in the brand gradient. Used once per page at most. */
-.gradient-text {
+/* The wordmark: one word, two weights of light. "ember" is lit in the brand
+   gradient, "space" sits faded beside it — the name ages the way a card does. */
+.wordmark-text {
+  letter-spacing: -0.035em;
+}
+.wordmark-ember {
   background: var(--gradient-brand);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+.wordmark-space {
+  color: color-mix(in oklab, var(--violet) 32%, #c9c3d6);
 }
 
 /* ---------------------------------------------------------------------------
@@ -352,23 +375,36 @@ h3 {
 --------------------------------------------------------------------------- */
 .note {
   --tint: 1;
+  --heat: 1;
   --state: var(--color-state-working);
 
   position: relative;
   border-radius: var(--radius-card);
   border: 1px solid
-    color-mix(in oklab, var(--state) calc(var(--tint) * 48%), var(--line));
+    color-mix(
+      in oklab,
+      var(--ember-amber) calc(var(--heat) * 55%),
+      color-mix(in oklab, var(--state) calc(var(--tint) * 34%), var(--line))
+    );
   background-color: var(--surface);
+  /* An ember glows hottest underneath: the yellow core sits at the bottom-left
+     and rises into the state colour. Both are weighted by age — --heat takes
+     the yellow away first, --tint then drains the violet — so the gradient is
+     the age, and nothing here is decoration. */
   background-image: linear-gradient(
-    152deg,
-    color-mix(in oklab, var(--state) calc(var(--tint) * 52%), var(--surface)) 0%,
-    color-mix(in oklab, var(--state) calc(var(--tint) * 30%), var(--surface)) 55%,
-    color-mix(in oklab, var(--state) calc(var(--tint) * 16%), var(--surface)) 100%
+    20deg,
+    color-mix(in oklab, var(--ember-core) calc(var(--heat) * 100%), color-mix(in oklab, var(--state) calc(var(--tint) * 14%), var(--surface))) 0%,
+    color-mix(in oklab, var(--ember-amber) calc(var(--heat) * 82%), color-mix(in oklab, var(--state) calc(var(--tint) * 18%), var(--surface))) 22%,
+    color-mix(in oklab, var(--ember-blush) calc(var(--heat) * 70%), color-mix(in oklab, var(--state) calc(var(--tint) * 22%), var(--surface))) 44%,
+    color-mix(in oklab, var(--state) calc(var(--tint) * 26%), var(--surface)) 70%,
+    color-mix(in oklab, var(--state) calc(var(--tint) * 36%), var(--surface)) 100%
   );
   box-shadow:
     0 1px 2px color-mix(in oklab, var(--ink) 7%, transparent),
-    0 14px 28px -20px
-      color-mix(in oklab, var(--state) calc(var(--tint) * 65%), transparent);
+    0 18px 32px -18px
+      color-mix(in oklab, var(--ember-amber) calc(var(--heat) * 75%), transparent),
+    0 24px 40px -24px
+      color-mix(in oklab, var(--state) calc(var(--tint) * 70%), transparent);
   transition:
     box-shadow 420ms var(--ease-out),
     border-color 420ms ease,
@@ -376,20 +412,58 @@ h3 {
     transform 260ms var(--ease-out);
 }
 
+/* How much heat is left, as a violet bar along the bottom edge. Shortens with
+   --tint, so a card's age reads even in greyscale. Violet only: the yellow is
+   the card's, not the bar's. */
+.note-heat {
+  position: absolute;
+  left: 18px;
+  bottom: 0;
+  width: calc((100% - 36px) * var(--tint));
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(90deg, var(--violet-lift), var(--violet));
+  box-shadow: 0 0 calc(var(--tint) * 10px) color-mix(in oklab, var(--violet-lift) 70%, transparent);
+  pointer-events: none;
+}
+.note[data-blocked="true"] .note-heat,
+.note[data-heat="resting"] .note-heat {
+  display: none;
+}
+
+/* Resting: away, not stale. A quiet grey that never glows. */
+.note[data-heat="resting"] {
+  box-shadow: 0 1px 2px color-mix(in oklab, var(--ink) 6%, transparent);
+}
+.note[data-heat="resting"] .note-text {
+  color: var(--ink-soft);
+}
+
 /* The tint ladder lives on any element carrying data-decay, not just .note.
    The wrapper carries the tier so the card and the avatar that overhangs it
    both inherit --tint from one place. */
+/* --heat is the yellow core. It goes before the violet does: fresh cards burn
+   yellow into violet, an hour or two in only a trace is left, and from three
+   hours the card is violet alone and draining. */
 [data-decay="fresh"] {
   --tint: 1;
+  --heat: 1;
 }
 [data-decay="soft"] {
   --tint: 0.72;
+  --heat: 0.35;
 }
 [data-decay="curl"] {
   --tint: 0.42;
+  --heat: 0;
 }
 [data-decay="stale"] {
   --tint: 0.14;
+  --heat: 0;
+}
+/* Resting is away, not stale: no heat at any age. */
+[data-heat="resting"] {
+  --heat: 0;
 }
 
 /* Hover: the card lifts toward the light. Cheap, physical, and it never moves
@@ -410,12 +484,15 @@ h3 {
 .note[data-blocked="true"] {
   --tint: 1;
   background-color: var(--color-state-blocked);
-  background-image: linear-gradient(
-    152deg,
-    color-mix(in oklab, white 16%, var(--color-state-blocked)) 0%,
-    var(--color-state-blocked) 55%,
-    color-mix(in oklab, black 10%, var(--color-state-blocked)) 100%
-  );
+  /* Burning: red, with a yellow flame tip at the far edge. */
+  background-image:
+    radial-gradient(70% 160% at 100% 60%, color-mix(in oklab, var(--ember-core) 55%, transparent), transparent 58%),
+    linear-gradient(
+      152deg,
+      color-mix(in oklab, black 8%, var(--color-state-blocked)) 0%,
+      var(--color-state-blocked) 50%,
+      color-mix(in oklab, #ff8a4c 40%, var(--color-state-blocked)) 100%
+    );
   border-color: color-mix(in oklab, white 26%, var(--color-state-blocked));
   color: white;
   animation: note-breathe 3.4s ease-in-out infinite;

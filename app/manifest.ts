@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 /**
  * Installability matters more here than any meta tag above it.
  *
- * Workspace is a pinned-tab product — the whole premise is a board people leave
+ * Emberspace is a pinned-tab product — the whole premise is a board people leave
  * open all day and glance at. Installed, it gets its own window, its own dock
  * icon and no address bar, which is the form the premise actually wants.
  *
@@ -17,8 +17,8 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Workspace",
-    short_name: "Workspace",
+    name: "Emberspace",
+    short_name: "Emberspace",
     description:
       "An ambient status board that replaces the daily standup. See what your team is working on without asking.",
     start_url: "/board",

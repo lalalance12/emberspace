@@ -41,8 +41,8 @@
 .landing-model-notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; transform-style: preserve-3d; }
 .landing-model-note { --model-accent: var(--violet); --model-tint: 16%; display: flex; flex-direction: column; min-height: 146px; padding: 13px; border: 1px solid color-mix(in oklab, var(--model-accent) 27%, white); border-radius: 12px; background: color-mix(in oklab, var(--model-accent) var(--model-tint), white); box-shadow: 0 3px 0 color-mix(in oklab, var(--model-accent) 24%, #e9e4f2), 0 10px 15px #38276510; transform: translateZ(27px); transition: background-color 700ms ease, border-color 700ms ease, box-shadow 400ms ease, transform 400ms var(--ease-in-out); }
 .landing-model-note[data-state="blocked"] { --model-accent: var(--signal); --model-tint: 10%; transform: translateZ(42px); }
-.landing-model-note[data-state="reviewing"] { --model-accent: #4384be; --model-tint: 10%; transform: translateZ(17px); }
-.landing-model-note[data-state="break"] { --model-accent: #328271; --model-tint: 8%; transform: translateZ(24px); }
+.landing-model-note[data-state="reviewing"] { transform: translateZ(17px); }
+.landing-model-note[data-state="break"] { --model-accent: #9a93ab; --model-tint: 8%; transform: translateZ(24px); }
 .landing-model-person { display: flex; align-items: center; gap: 6px; font-size: 10px; }
 .landing-model-person > span:first-child { display: grid; place-items: center; width: 23px; height: 23px; flex-shrink: 0; color: var(--model-accent); background: #ffffffb8; border: 1px solid #ffffff; border-radius: 8px; font-family: var(--font-display); font-size: 10px; }
 .landing-model-person strong { font-weight: 600; }
@@ -93,7 +93,7 @@
 .landing-stack-note { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 23px; border: 1px solid #ffffffb0; border-radius: 16px; background: #faf9fc; box-shadow: 0 2px 0 #c6b5e3, 0 4px 0 #c6b5e3, 0 6px 0 #c6b5e3, 0 24px 38px -14px #38276547; }
 .landing-stack-blocked { background: #f7dbe0; box-shadow: 0 2px 0 #dcaab4, 0 4px 0 #dcaab4, 0 6px 0 #dcaab4, 0 24px 38px -14px #38276547; }
 .landing-stack-working { isolation: isolate; }
-.landing-stack-tint { position: absolute; inset: 0; border-radius: inherit; background: #d4c2f3; pointer-events: none; z-index: -1; }
+.landing-stack-tint { position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(20deg, #ffdb72 0%, #ffc47e 22%, #f6c4dc 44%, #dcc8ff 70%, #c9b2ff 100%); pointer-events: none; z-index: -1; }
 .landing-stack-person { display: flex; align-items: center; gap: 9px; font-size: 12px; }
 .landing-stack-person > span:first-child { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #ffffff; border-radius: 10px; background: #ffffff85; font-family: var(--font-display); font-size: 13px; }
 .landing-stack-person strong { font-weight: 600; }
@@ -268,7 +268,7 @@ html:has(.landing-experience) { scroll-behavior: smooth; }
 .landing-glow { position: absolute; border-radius: 50%; filter: blur(70px); }
 .landing-glow-a { width: 58vw; height: 58vw; max-width: 900px; max-height: 900px; left: -16vw; top: -24vw; background: color-mix(in oklab, var(--violet-lift) 30%, transparent); animation: landing-drift-a 26s ease-in-out infinite alternate; }
 .landing-glow-b { width: 46vw; height: 46vw; max-width: 760px; max-height: 760px; right: -14vw; top: 18vh; background: color-mix(in oklab, var(--violet) 18%, transparent); animation: landing-drift-b 32s ease-in-out infinite alternate; }
-.landing-glow-c { width: 40vw; height: 40vw; max-width: 640px; max-height: 640px; left: 30vw; bottom: -22vw; background: color-mix(in oklab, #c9b4ff 34%, transparent); animation: landing-drift-a 38s ease-in-out -12s infinite alternate-reverse; }
+.landing-glow-c { width: 40vw; height: 40vw; max-width: 640px; max-height: 640px; left: 30vw; bottom: -22vw; background: color-mix(in oklab, var(--ember-amber) 26%, transparent); animation: landing-drift-a 38s ease-in-out -12s infinite alternate-reverse; }
 .landing-wave, .auth-story-wave {
   --wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320' preserveAspectRatio='none'%3E%3Cpath d='M0 160 C240 60 480 60 720 160 S1200 260 1440 160 V320 H0 Z'/%3E%3C/svg%3E");
   position: absolute; left: 0; right: 0;
@@ -377,3 +377,23 @@ em.landing-line { animation-delay: 300ms; }
   .landing-experience .btn-primary:hover:not(:active) { transform: translateY(-2px); }
   .landing-closing-cta:hover:not(:active) { transform: translateY(-2px); }
 }
+
+/* Emberspace: the hero board's working notes are embers — a yellow core rising
+   into violet — and they cool to ash when "7 hours later" is pressed. */
+.landing-model-note:not([data-state="blocked"]):not([data-state="break"]) {
+  background-image: linear-gradient(20deg, #ffdb72 0%, #ffc47e 20%, #f6c4dc 42%, #dcc8ff 68%, #c9b2ff 100%);
+  border-color: #f0c98e;
+  box-shadow: 0 3px 0 #e8c58e, 0 12px 22px -10px #ffab3d88;
+}
+.landing-model-note[data-state="blocked"] {
+  background-image: radial-gradient(70% 160% at 100% 60%, #ffd25e66, transparent 58%), linear-gradient(152deg, #c22c43, #cf334b 50%, #e2604f);
+  color: white;
+}
+.landing-model-note[data-state="blocked"] .landing-model-state,
+.landing-model-note[data-state="blocked"] .landing-model-meta { color: #ffffffd0; }
+.landing-model-note[data-state="blocked"] .landing-model-state::before { background: white; }
+.landing-board-object[data-aged="true"] .landing-model-note:not([data-state="blocked"]) {
+  background-image: none;
+  background-color: #f6f5f8;
+}
+.landing-glow-a { background: radial-gradient(circle at 60% 60%, color-mix(in oklab, var(--ember-core) 22%, transparent), color-mix(in oklab, var(--violet-lift) 30%, transparent) 55%, transparent 75%); }

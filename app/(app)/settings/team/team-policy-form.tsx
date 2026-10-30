@@ -137,7 +137,7 @@ export function TeamPolicyForm({ team }: { team: TeamPolicy }) {
       <section className="settings-invite" aria-labelledby="invite-heading">
         <div>
           <h2 id="invite-heading">Make room for your team</h2>
-          <p>Share this join code to bring a teammate into your workspace. Anyone with the code can join.</p>
+          <p>Share this join code to bring a teammate into your Emberspace. Anyone with the code can join.</p>
           <p>Rotating it replaces the code immediately. Current members stay.</p>
         </div>
         <div className="settings-invite-code">

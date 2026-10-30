@@ -1,10 +1,10 @@
-# Workspace
+# Emberspace
 
 Ambient status board that replaces the daily standup. Everyone posts what
 they're working on; two shared views show the whole team at a glance.
 
-Workspace is an **attention layer, not a chat app.** It never carries
-conversation. When someone needs a teammate, Workspace produces a nudge that
+Emberspace is an **attention layer, not a chat app.** It never carries
+conversation. When someone needs a teammate, Emberspace produces a nudge that
 sends them to Slack, Discord, or wherever the team actually talks. Resist every
 temptation to add messaging — the moment it has a DM inbox it stops being
 glanceable and starts competing with tools that do it better.
@@ -184,20 +184,26 @@ failed and what to do — never a bare "Something went wrong."
 
 ## Design direction
 
-**Lit and unlit.** The product is about attention over time: a status is worth
-something when it is fresh and worth less every hour it sits there. So light is
-the design language. A fresh card is lit — its state colour at full strength,
-with a matching glow underneath. As it ages the colour drains out until the card
-is near-white and the mono age label is all that is left.
+**Every status is an ember.** The product is about attention over time: a
+status is worth something when it is fresh and worth less every hour it sits
+there. So heat is the design language. A fresh card glows — a yellow core at
+the bottom-left rising into violet, with a warm glow underneath. As it ages the
+yellow goes first, then the violet drains, until the card is near-white ash and
+the mono age label is all that is left. The name says it: "ember" lit, "space"
+faded, in the wordmark itself.
 
 Decay is **chromatic, not geometric.** An earlier version cut the corner and
 tilted the card; both read as a rendering fault rather than as ageing. The card
 keeps its shape and loses its colour instead.
 
-The gradient is therefore never decoration. `--tint` is set by the decay tier
-and every colour on a card is mixed against it with `color-mix()`, which makes
-the palette itself the staleness signal. If you add a gradient that does not
-encode something true, take it out.
+The gradient is therefore never decoration. The decay tier sets two values:
+`--heat` (the yellow core: 1 → 0.35 → 0 → 0) and `--tint` (the violet: 1 → 0.72
+→ 0.42 → 0.14). Every colour on a card is mixed against them with
+`color-mix()`, which makes the palette itself the staleness signal. If you add a
+gradient that does not encode something true, take it out. The board's ground
+runs from warm at the top to ash at the bottom for the same reason: higher on
+the board is hotter. The violet bar along a card's bottom edge (`.note-heat`)
+shortens with `--tint` and is violet only — the yellow belongs to the card.
 
 Ground is an **off-white with a violet cast**, never pure white — a screen
 people keep open all day should feel like paper under a warm lamp, not a
@@ -207,12 +213,20 @@ Tokens live in `app/globals.css` as Tailwind v4 `@theme` values, aliased in
 `:root` to short names (`--canvas`, `--ink`, `--violet`, `--signal`, …) so both
 spellings work.
 
-State colours are one token each — `--color-state-working` (violet),
-`reviewing` (blue), `blocked` (signal red), `meeting` (amber), `break` (mint),
-`off` (quiet violet-grey) — matched in lightness and chroma so the board reads
-as one system. A state contributes exactly one colour, `--state`; the tint, the
-left edge, the dot and the glow are all mixed from it. Mapped in
-`lib/status-state.ts`.
+**Colour means attention, not activity — three heats, not seven colours.**
+`heatFor()` in `lib/status-state.ts` maps every state to one of them:
+
+| Heat | States | Colour |
+|---|---|---|
+| glowing | working, reviewing, in a meeting, other | violet, with the ember core while fresh |
+| burning | blocked | signal red, with a yellow flame tip; never cools |
+| resting | on a break, done for the day, off | quiet grey; away, not stale, never glows |
+
+The `--color-state-*` tokens still exist one per state, but resolve to those
+three colours, so a state contributes one colour (`--state`) and the card mixes
+everything else from it. What someone is *doing* is the label and its icon
+(`components/state-icon.tsx`) — never a hue. Ember tokens: `--ember-core`,
+`--ember-amber`, `--ember-blush`, `--ember-spark`, only ever mixed in by `--heat`.
 
 ### Type
 
@@ -230,10 +244,10 @@ age label, and the tests.
 
 | Age | `--tint` | Treatment |
 |---|---|---|
-| < 1h | 1.0 | state colour at full strength, coloured glow |
-| 1–3h | 0.72 | colour and glow begin to go |
-| 3–6h | 0.42 | mostly drained |
-| > 6h | 0.14 | near-white, reads `STALE · 7H` |
+| < 1h | 1.0 | yellow core into full violet, warm glow (`--heat` 1) |
+| 1–3h | 0.72 | a trace of yellow left, violet starting to go (`--heat` 0.35) |
+| 3–6h | 0.42 | violet only, mostly drained (`--heat` 0) |
+| > 6h | 0.14 | near-white ash, reads `STALE · 7H` |
 
 Blocked cards are exempt from decay — they hold full chroma, invert to white
 ink, and breathe on a slow loop until resolved. A blocker should never fade
@@ -243,6 +257,18 @@ The **avatar is always violet**, never the state colour: the circle answers
 *who* and the card answers *what is happening*, one signal each. It overhangs
 the card's top-left corner as a sibling of `.note`, with the wrapper carrying
 `data-decay` so both inherit `--tint` from one place.
+
+### The board is an ember bed
+
+Where an update sits is how hot it is. `/board` groups every card into four
+bands, top to bottom: **Burning** (blockers, full-width), **Glowing** (under an
+hour, full cards), **Warm** (1–6 hours, slim rows) and **Ash** (gone cold, or
+resting, as one-line chips). The chosen sort orders cards *within* a band;
+blockers are always first. It is one grid, not four containers, so a card that
+cools into the next band slides there and keeps keyboard focus. `StatusNote`
+takes a `variant` (`card` / `row` / `chip`) for the three sizes — same markup,
+different CSS. The overview above it is the hearth: deep violet, one ember per
+teammate.
 
 ### The card is a headline
 
