@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { DeleteAccountForm } from "./delete-account-form";
 import { MeSettingsForm } from "./me-settings-form";
 import { PasswordSettingsForm } from "./password-settings-form";
 import { PageHeader } from "@/components/ui/page";
@@ -24,6 +25,7 @@ export default async function MeSettingsPage() {
       <div className="settings-content settings-stack">
         <MeSettingsForm profile={viewer.profile} />
         <PasswordSettingsForm />
+        <DeleteAccountForm isHead={viewer.profile.role === "head"} onTeam={Boolean(viewer.profile.team_id)} />
       </div>
     </>
   );

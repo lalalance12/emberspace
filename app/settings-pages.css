@@ -157,3 +157,11 @@
 @media (prefers-reduced-motion: reduce) {
   .status-state-choice { transition: none; }
 }
+
+/* Deleting an account: the armed state, in the same signal tint as leaving a team. */
+.settings-delete-confirm { display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: var(--radius-control); border: 1px solid color-mix(in oklab, var(--signal) 35%, transparent); background: color-mix(in oklab, var(--signal) 5%, transparent); }
+.settings-delete-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.settings-delete-list li { position: relative; padding-left: 14px; font-size: .875rem; color: var(--ink-soft); }
+.settings-delete-list li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--signal); }
+.btn.settings-delete-submit { background: var(--signal); box-shadow: 0 1px 2px color-mix(in oklab, var(--ink) 12%, transparent), 0 10px 22px -12px var(--signal); }
+.btn.settings-delete-submit:hover:not(:disabled) { background: color-mix(in oklab, var(--signal) 88%, black); box-shadow: 0 1px 2px color-mix(in oklab, var(--ink) 12%, transparent), 0 16px 30px -14px var(--signal); }

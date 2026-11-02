@@ -9,7 +9,7 @@ import { getSessionCookie } from "better-auth/cookies";
  * which no real path satisfies. So the landing page is public and nothing
  * beneath it leaks. /api/auth is Better Auth's own endpoints.
  */
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/auth", "/api/auth"];
+const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/auth", "/api/auth"];
 
 /**
  * Sends signed-out visitors to /login.
