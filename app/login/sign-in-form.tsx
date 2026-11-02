@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -17,10 +18,10 @@ import { authClient } from "@/lib/auth-client";
  * a fallback and starts being a wall. Password sign-in touches no email
  * infrastructure at all and cannot be rate limited into uselessness.
  *
- * The consequence to keep in mind: there is no self-serve password recovery.
- * A forgotten password is reset by whoever runs the database.
+ * A forgotten password is recovered by email, from /forgot-password — the one
+ * email Emberspace sends, and only to someone who asked for it.
  */
-export function SignInForm() {
+export function SignInForm({ justReset = false }: { justReset?: boolean }) {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -55,6 +56,11 @@ export function SignInForm() {
 
   return (
     <form onSubmit={onSubmit} className="public-entry-form">
+      {justReset && (
+        <p role="status" className="public-reset-sent">
+          Password saved. Sign in with your new one.
+        </p>
+      )}
       <Field label="Email">
         <Input
           type="email"
@@ -79,6 +85,9 @@ export function SignInForm() {
           data-testid="password"
         />
       </Field>
+      <Link href="/forgot-password" className="public-text-link public-forgot-link">
+        Forgot your password?
+      </Link>
 
       <Button type="submit" disabled={pending} className="w-full" data-testid="sign-in">
         {pending ? "Signing in…" : "Sign in"}
