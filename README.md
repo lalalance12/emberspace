@@ -97,8 +97,12 @@ bar either.
    Production, Preview and Development. That sets `DATABASE_URL`.
 2. Add `BETTER_AUTH_SECRET` (and `NEXT_PUBLIC_SITE_URL` for production).
 3. Apply the schema once from your machine: `vercel env pull .env.local`, then
-   `pnpm db:migrate`. Re-run it after every new migration.
-4. Deploy.
+   `pnpm db:migrate`.
+4. In GitHub, add a repository secret `DATABASE_URL` (Settings → Secrets and
+   variables → Actions) holding the production branch's **unpooled** connection
+   string. From then on `.github/workflows/migrate.yml` runs `pnpm db:migrate`
+   whenever a migration lands on `main`; already-applied files are skipped.
+5. Deploy.
 
 `pnpm db:reset --yes` drops every table and re-applies the migrations from
 scratch. It is for disposable test databases only.
