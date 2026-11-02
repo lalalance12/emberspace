@@ -25,7 +25,7 @@ no third-party services.
 
 ## Environment
 
-Three variables.
+Five variables.
 
 ```bash
 vercel env pull .env.local     # if Neon was added through Vercel
@@ -37,6 +37,8 @@ vercel env pull .env.local     # if Neon was added through Vercel
 | `DATABASE_URL` | Set by Vercel when Neon is added (Storage → Create → Neon). Server-only. |
 | `BETTER_AUTH_SECRET` | You make it: `openssl rand -base64 32`. Add it in Vercel → Settings → Environment Variables. Server-only. |
 | `NEXT_PUBLIC_SITE_URL` | The domain this deployment answers on. Blank locally. |
+| `RESEND_API_KEY` | From [resend.com](https://resend.com) → API Keys. Sends password reset emails. Server-only. Blank locally prints the link to the console instead. |
+| `EMAIL_FROM` | The sender, e.g. `Emberspace <no-reply@yourdomain.com>`, on a domain verified in Resend. |
 
 ### Nothing bypasses RLS
 
@@ -95,20 +97,33 @@ bar either.
    Production, Preview and Development. That sets `DATABASE_URL`.
 2. Add `BETTER_AUTH_SECRET` (and `NEXT_PUBLIC_SITE_URL` for production).
 3. Apply the schema once from your machine: `vercel env pull .env.local`, then
-   `pnpm db:migrate`. Re-run it after every new migration.
-4. Deploy.
+   `pnpm db:migrate`.
+4. In GitHub, add a repository secret `DATABASE_URL` (Settings → Secrets and
+   variables → Actions) holding the production branch's **unpooled** connection
+   string. From then on `.github/workflows/migrate.yml` runs `pnpm db:migrate`
+   whenever a migration lands on `main`; already-applied files are skipped.
+5. Deploy.
 
 `pnpm db:reset --yes` drops every table and re-applies the migrations from
 scratch. It is for disposable test databases only.
 
 ### Sign-in
 
-Email and password. No magic link, no OAuth providers, nothing that sends email —
-so nothing that can be rate limited.
+Email and password. No magic link and no OAuth providers: signing in never
+waits on an email, so it cannot be rate limited.
 
-The consequence to accept: **there is no self-serve password recovery.** A
-forgotten password is reset by whoever runs the database. For a small team that
-is a fair trade for sign-in with no moving parts.
+**Forgot your password?** on `/login` leads to `/forgot-password`, which emails a
+reset link through Resend. The link works once, for an hour, and lands on
+`/reset-password`; saving a new password signs the account out everywhere else.
+This is the only email Emberspace sends — notifications stay in-app.
+
+Until a domain is verified in Resend, its `onboarding@resend.dev` sender only
+delivers to the address you signed up to Resend with. Verify a domain (Resend →
+Domains) before real people need resets.
+
+**Deleting an account** is on `/settings/me`, behind the password. It leaves the
+team first through `leave_team()` — so a head hands the team on — then deletes
+the account, and everything the person posted goes with it.
 
 ### Live updates without Realtime
 
@@ -157,8 +172,9 @@ app/
     me/             set my status — the most important screen
     timeline/       one day's history
     settings/team/  membership for everyone; nudge policy + join code head-only
-    settings/me/    nudge preferences, pause, message link, password
+    settings/me/    nudge preferences, pause, message link, password, delete account
   login/ signup/    email + password
+  forgot-password/ reset-password/   the emailed reset link and where it lands
   auth/signout/     POST only — ends the session server-side
 components/
   status-note.tsx   the sticky note, including the decay treatment
@@ -166,6 +182,7 @@ components/
 lib/
   db.ts             the Postgres pool and withUser() — every query goes through it
   auth.ts           Better Auth (server); auth-client.ts is the browser half
+  email.ts          the password reset email, through Resend — the only email
   queries.ts        server-side reads for first paint
   rpc.ts            typed wrappers over the write API
   scheduler.ts      the two jobs pg_cron used to run

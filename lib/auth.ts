@@ -3,15 +3,20 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 
-import { pool } from "@/lib/db";
+import { pool, withUser } from "@/lib/db";
+import { passwordResetEmail, sendEmail } from "@/lib/email";
 import { siteURL } from "@/lib/site-url";
 
 /**
- * Accounts and sessions. Email and password, nothing else — the same shape the
- * Supabase version had after the magic link was removed, and for the same
- * reason: nothing here sends email, so nothing here can be rate limited into
- * uselessness. There is no self-serve password recovery; a forgotten password
- * is reset by whoever runs the database.
+ * Accounts and sessions. Email and password — signing in never waits on an
+ * email, so it cannot be rate limited into uselessness the way the old magic
+ * link was. The one email is the password reset link (lib/email.ts, Resend),
+ * which only someone who has forgotten their password ever asks for.
+ *
+ * Deleting an account is self-serve too. beforeDelete releases the team
+ * membership first, through leave_team(), so a head who deletes their account
+ * hands the team on exactly as a head who leaves does. The delete itself then
+ * cascades from auth_user through the profile to everything the person wrote.
  *
  * Better Auth owns four tables (auth_user, auth_session, auth_account,
  * auth_verification), created in db/migrations/20260805085900_postgres_compat.sql.
@@ -35,8 +40,30 @@ export const auth = betterAuth({
     minPasswordLength: 8,
     // Signup lands straight on /onboarding, signed in. No confirmation step.
     autoSignIn: true,
+    // The emailed link lands on Better Auth's callback, which forwards to
+    // /reset-password?token=… — the page the person chooses a new one on.
+    sendResetPassword: async ({ user, url }) => {
+      await sendEmail({ to: user.email, ...passwordResetEmail(user.name, url) });
+    },
+    resetPasswordTokenExpiresIn: 60 * 60,
+    // Whoever had the old password is signed out everywhere.
+    revokeSessionsOnPasswordReset: true,
   },
-  user: { modelName: "auth_user" },
+  user: {
+    modelName: "auth_user",
+    deleteUser: {
+      enabled: true,
+      beforeDelete: async (user) => {
+        await withUser(user.id, async (db) => {
+          const { rows } = await db.query<{ team_id: string | null }>(
+            "select team_id from public.profiles where id = $1",
+            [user.id],
+          );
+          if (rows[0]?.team_id) await db.query("select public.leave_team()");
+        });
+      },
+    },
+  },
   session: { modelName: "auth_session" },
   account: { modelName: "auth_account" },
   verification: { modelName: "auth_verification" },
