@@ -3,7 +3,7 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 
-import { pool, withUser } from "@/lib/db";
+import { authPool, withUser } from "@/lib/db";
 import { passwordResetEmail, sendEmail } from "@/lib/email";
 import { siteURL } from "@/lib/site-url";
 
@@ -27,7 +27,7 @@ import { siteURL } from "@/lib/site-url";
  * set in every environment; `openssl rand -base64 32` makes one.
  */
 export const auth = betterAuth({
-  database: pool,
+  database: authPool,
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: {
     // Previews get their own *.vercel.app host on every deploy; the session
