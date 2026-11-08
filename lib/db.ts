@@ -15,13 +15,20 @@ import pg, { type PoolClient } from "pg";
  * query that skips withUser().
  */
 
-// Timestamps reach the app as ISO strings, the shape Supabase delivered and
-// every component already expects. pg's own parser handles Postgres's offset
-// format; this only re-serialises the result.
-const parseTimestamptz = pg.types.getTypeParser(pg.types.builtins.TIMESTAMPTZ);
-const parseTimestamp = pg.types.getTypeParser(pg.types.builtins.TIMESTAMP);
-pg.types.setTypeParser(pg.types.builtins.TIMESTAMPTZ, (v) => (parseTimestamptz(v) as Date).toISOString());
-pg.types.setTypeParser(pg.types.builtins.TIMESTAMP, (v) => (parseTimestamp(v) as Date).toISOString());
+// App queries get timestamps as ISO strings, the shape Supabase delivered and
+// every component already expects. This is per pool on purpose: Better Auth
+// needs real Dates, because it decides whether a session or a reset token has
+// expired with `expiresAt < new Date()`, and a string makes that quietly false.
+// It also leaves pg's shared parsers alone, so this module can be evaluated
+// more than once in a process without wrapping its own output.
+const isoTimestamps = {
+  getTypeParser: ((oid: number, format?: "text" | "binary") => {
+    const parse = pg.types.getTypeParser(oid, format as "text");
+    const isTimestamp = oid === pg.types.builtins.TIMESTAMPTZ || oid === pg.types.builtins.TIMESTAMP;
+    if (!isTimestamp || format === "binary") return parse;
+    return (value: string) => (parse(value) as Date).toISOString();
+  }) as typeof pg.types.getTypeParser,
+};
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -35,16 +42,25 @@ function assertConfigured() {
   }
 }
 
-const globalForPool = globalThis as unknown as { workspacePool?: pg.Pool };
+const globalForPool = globalThis as unknown as { appPool?: pg.Pool; authPool?: pg.Pool };
 
 /** Reused across hot reloads in dev, and across invocations on Fluid compute. */
 export const pool =
-  globalForPool.workspacePool ??
-  new pg.Pool({ connectionString, max: 5, idleTimeoutMillis: 10_000 });
+  globalForPool.appPool ??
+  new pg.Pool({ connectionString, max: 5, idleTimeoutMillis: 10_000, types: isoTimestamps });
 
-if (!globalForPool.workspacePool) {
-  globalForPool.workspacePool = pool;
+/** Better Auth's connection: the same database, with pg's default Date parsing. */
+export const authPool =
+  globalForPool.authPool ??
+  new pg.Pool({ connectionString, max: 3, idleTimeoutMillis: 10_000 });
+
+if (!globalForPool.appPool) {
+  globalForPool.appPool = pool;
   attachDatabasePool(pool);
+}
+if (!globalForPool.authPool) {
+  globalForPool.authPool = authPool;
+  attachDatabasePool(authPool);
 }
 
 /**

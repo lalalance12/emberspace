@@ -7,6 +7,10 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
+  // There is no local database: every page does real round trips to Neon, and
+  // the default 5s is less than one sign-in-and-redirect from far away.
+  timeout: 120_000,
+  expect: { timeout: 25_000 },
   reporter: [["list"]],
   use: {
     baseURL: BASE_URL,
