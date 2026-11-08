@@ -7,7 +7,7 @@
  * Same rule as lib/rpc.ts: say what happened and what to do about it. Never a
  * bare apology, and never the raw string when a better one exists.
  */
-export type AuthContext = "signin" | "signup" | "password";
+export type AuthContext = "signin" | "signup" | "password" | "reset" | "delete";
 
 interface AuthErrorLike {
   code?: string;
@@ -35,7 +35,13 @@ export function readableAuthError(
     case "INVALID_PASSWORD":
       return context === "password"
         ? "Your current password isn't right. Check it and try again."
-        : "That password isn't right. Check it and try again.";
+        : context === "delete"
+          ? "That password isn't right, so your account was not deleted. Check it and try again."
+          : "That password isn't right. Check it and try again.";
+    case "INVALID_TOKEN":
+      return "This reset link has expired or was already used. Ask for a new one below.";
+    case "RESET_PASSWORD_DISABLED":
+      return "Password reset isn't set up on this Emberspace yet. Ask whoever runs it to add an email key.";
     case "INVALID_EMAIL":
       return "That doesn't look like an email address. Check it and try again.";
     case "CREDENTIAL_ACCOUNT_NOT_FOUND":
@@ -44,6 +50,10 @@ export function readableAuthError(
 
   if (status === 429 || /too many requests|rate limit/i.test(message)) {
     return "Too many attempts in a short time. Wait a minute, then try again.";
+  }
+
+  if (context === "reset" && status && status >= 500) {
+    return "The reset email couldn't be sent just now. Wait a minute, then try again.";
   }
 
   if (/relation .* does not exist/i.test(message)) {

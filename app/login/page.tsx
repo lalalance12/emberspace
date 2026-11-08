@@ -8,9 +8,14 @@ import { getSessionUser } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Sign in" };
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ reset?: string }>;
+}) {
   // Someone already signed in has no business on the front door.
   if (await getSessionUser()) redirect("/board");
+  const { reset } = await searchParams;
 
   return (
     <AuthShell
@@ -30,7 +35,7 @@ export default async function LoginPage() {
         </>
       }
     >
-      <SignInForm />
+      <SignInForm justReset={reset === "1"} />
     </AuthShell>
   );
 }

@@ -41,9 +41,12 @@ See `README.md` for setup and commands.
 8. **Notifications are written by database triggers only.** There is no insert
    policy on `notifications` and there must never be one. Client code reads them
    and marks them read; it never creates them.
-9. **No email, no SMS, no push provider, no third-party realtime.**
+9. **No email notifications, no SMS, no push provider, no third-party realtime.**
    Notifications are in-app only. The `notifications` table plus the bell's
-   poll *is* the delivery mechanism.
+   poll *is* the delivery mechanism. The one email is the password reset link
+   (`lib/email.ts`, through Resend), sent only to someone who asked for it —
+   never a nudge, never a digest. `RESEND_API_KEY` is server-only, like the
+   other two secrets.
 
 Rules 5 and 8 are enforced by the database, not by convention: `status_updates`,
 `quick_picks` and `nudges` have **no write policies at all**, and
